@@ -20,50 +20,6 @@
 		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
 		const PRICE_LOCAL_STORAGE_KEY = 'price';
 
-		function downloadAddressInfosPrice(addressInfos, onFinished, onError) {
-			const url = 'https://api.blockchair.com/bitcoin-sv/stats';
-			const request = new XMLHttpRequest();
-			request.open('GET', url);
-			request.onreadystatechange = function () {
-				if (request.readyState == XMLHttpRequest.DONE) {
-					if (request.status == 200) {
-
-						let data = {};
-						try {
-							const tempData = JSON.parse(request.responseText).data;
-							if (tempData) {
-								data = tempData;
-							}
-						} catch (err) {
-							console.log(
-								`Unable to parsing JSON data from "${url}": ${err.message}
-								request.responseText:
-								${request.responseText}`);
-							onError('Unable to download price. Invalid data received from server.');
-							return;
-						}
-
-						const market_cap_usd = data.market_cap_usd;
-						const circulation = data.circulation;
-
-						if (!isNaN(market_cap_usd) && !isNaN(circulation) && circulation > 1763916464692325) {
-							onFinished(addressInfos, market_cap_usd / circulation);
-							return;
-						}
-
-						onError('Unable to calculate price. Unexpected data received from server.');
-						return;
-
-					} else {
-						console.log(`Error requesting "${url}:". Status code: ${request.status}.`);
-						onError(`Unable to update balances. Request status code: ${request.status}.`);
-						return;
-					}
-				}
-			};
-			request.send();
-		}
-
 		function setAddressInfosInLocalStorage(addressInfos) {
 			localStorage.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, JSON.stringify(addressInfos));
 		}
@@ -81,9 +37,6 @@
 		}
 
 		function setPriceInLocalStorage(price) {
-			if (isNaN(price)) {
-				alert('it broke:', price);
-			}
 			localStorage.setItem(PRICE_LOCAL_STORAGE_KEY, price.toString());
 		}
 
@@ -99,9 +52,29 @@
 			return NaN;
 		}
 
-		function downloadAddressInfosBalance(addressInfos, onFinished, onError) {
+		async function fetchPrice() {
+			const url = 'https://api.blockchair.com/bitcoin-sv/stats';
+
+			return fetch(url)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					throw new Error(`Request for price rejected with status ${response.status}`);
+				})
+				.then(responseJSON => {
+					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
+					const market_cap_usd = data.market_cap_usd;
+					const circulation = data.circulation;
+					if (!isNaN(market_cap_usd) && !isNaN(circulation) && circulation > 1763916464692325) {
+						return market_cap_usd / circulation;
+					}
+					throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
+				});
+		}
+
+		async function fetchAddressBalances(addressInfos) {
 			if (addressInfos.length == 0) {
-				onFinished(addressInfos);
 				return;
 			}
 
@@ -111,68 +84,164 @@
 			// Addresses can be comma-separated values.
 			const url = `https://api.bitindex.network/api/v2/addrs/balance?address=${addresses.join(',')}`;
 
-			const request = new XMLHttpRequest();
-			request.open('GET', url);
-			request.onreadystatechange = function () {
-				if (request.readyState == XMLHttpRequest.DONE) {
-					if (request.status == 200) {
-
-						let dataArray = [];
-						try {
-							const data = JSON.parse(request.responseText).data;
-							if (Array.isArray(data)) {
-								dataArray = data;
-							}
-							/* Example request.responseText:
+			return fetch(url)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					throw new Error(`Request for address info rejected with status ${response.status}`);
+				})
+				.then(responseJSON => {
+					/* Example responseJSON:
+						{
+							"data": [
 								{
-									"data": [
-										{
-											"address": "1BitcoinEaterAddressDontSendf59kuE",
-											"confirmed": 63791,
-											"unconfirmed": 0
-										},
-										{
-											"address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-											"confirmed": 1392000,
-											"unconfirmed": 144237
-										}
-									]
+									"address": "1BitcoinEaterAddressDontSendf59kuE",
+									"confirmed": 63791,
+									"unconfirmed": 0
+								},
+								{
+									"address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+									"confirmed": 1392000,
+									"unconfirmed": 144237
 								}
-							*/
-						} catch (err) {
-							console.log(
-								`Unable to parsing JSON data from "${url}": ${err.message}
-								request.responseText:
-								${request.responseText}`);
-							onError('Unable to update balances. Invalid data received from server.');
-							return;
+							]
 						}
-
-						// If data successfully downloaded.
-						if (dataArray.length == addressInfos.length) {
-							for (let i = 0; i < dataArray.length; i++) {
-								const confirmed = dataArray[i].confirmed;
-								const unconfirmed = dataArray[i].unconfirmed;
-								if (!isNaN(confirmed) && !isNaN(unconfirmed)) {
-									addressInfos[i].balance = confirmed + unconfirmed;
-								}
-								// addressInfos[i].balance may be a number or the default initial value.
+					*/
+					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
+					if (Array.isArray(data) && data.length == addressInfos.length) {
+						for (let i = 0; i < data.length; i++) {
+							const confirmed = data[i].confirmed;
+							const unconfirmed = data[i].unconfirmed;
+							if (!isNaN(confirmed) && !isNaN(unconfirmed)) {
+								addressInfos[i].balance = confirmed + unconfirmed;
 							}
-							onFinished(addressInfos);
-							return;
+							// addressInfos[i].balance may be a number or the default initial value.
 						}
-
-						onError('Unable to update balances. Unexpected data received from server.');
-						return;
-
-					} else {
-						console.log(`Error requesting "${url}:". Status code: ${request.status}.`);
-						onError(`Unable to update balances. Request status code: ${request.status}.`);
 						return;
 					}
+					throw new Error('Invalid data received when fetching address balances');
+				});
+		}
+
+		// Requests both at the same time.
+		async function fetchAddressInfosAndPrice(addressInfos) {
+			// Start fetching price now. To be 'await'ed later.
+			const pricePromise = fetchPrice()
+				.catch(error => {
+					const errorMessage = `Error fetching price: ${error.message}`;
+					console.log(errorMessage);
+					alert(errorMessage);
+					return getPriceFromLocalStorage();
+				});
+
+			await fetchAddressBalances(addressInfos)
+				.catch(error => {
+					const errorMessage = `Error fetching address balances: ${error.message}`;
+					console.log(errorMessage);
+					alert(errorMessage);
+				});
+
+			const price = await pricePromise;// May be NaN because of getPriceFromLocalStorage();
+
+			return { addressInfos, price };
+		}
+
+		function renderTable(addressInfos, price) {
+			setAddressInfosInLocalStorage(addressInfos);
+			setPriceInLocalStorage(price);
+
+			const addressesTable = document.getElementById("addressesTable");
+
+			if (addressInfos.length == 0) {
+				addressesTable.innerHTML = '';
+				addressesTable.style.display = 'none';
+				return;
+			}
+
+			addressesTable.style.display = '';
+
+			let tableInnerHTML = "<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>";
+
+			for (let i = 0; i < addressInfos.length; i++) {
+				// Hover text using AddressInfo note.
+				const addressNoteTitleHTML = (addressInfos.note ? ' title="' + addressInfos.note + '"' : '');
+
+				tableInnerHTML +=
+					`<tr>
+						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
+						<td${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
+						<td>${addressInfos[i].address}</td>
+						<td class="textRight">${addressInfos[i].balance}</td>
+						<td class="textRight">${parseFloat(addressInfos[i].balance * price).toFixed(2)}</td>
+						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="🧱"></a></td>
+					</tr>`;
+			}
+
+			// Display total values.
+			if (addressInfos.length > 1) {
+				const totalBalance = addressInfos.reduce((a, b) => a + b.balance, 0);
+				const totalValuation = addressInfos.reduce((a, b) => a + b.balance * price, 0);
+				tableInnerHTML +=
+					`<tr>
+						<th></th>
+						<th></th>
+						<th class="textRight">Total:</th>
+						<td class="textRight">${totalBalance}</td>
+						<td class="textRight">${parseFloat(totalValuation).toFixed(2)}</td>
+						<th></th>
+					</tr>`;
+			}
+
+			addressesTable.innerHTML = tableInnerHTML;
+		}
+
+		function removeAddressInfosIndex(index) {
+			const addressInfos = getAddressInfosFromLocalStorage();
+			const price = getPriceFromLocalStorage();
+			addressInfos.splice(index, 1);
+			renderTable(addressInfos, price);
+		}
+
+		function updateAddressInfosLabelFromIndex(index, label) {
+			const addressInfos = getAddressInfosFromLocalStorage();
+			addressInfos[index].label = label;
+			setAddressInfosInLocalStorage(addressInfos);
+		}
+
+		// Download balance for each new AddressInfo, update price, and then update UI.
+		function setupAddressInfosAndRender(addressInfos) {
+			fetchAddressInfosAndPrice(addressInfos)
+				.then(addressInfosAndPrice => {
+					renderTable(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
+				});
+		}
+
+		window.onload = function() {
+			// Hide table before loading data.
+			document.getElementById("addressesTable").style.display = 'none';
+
+			document.getElementById("addAddressesButton").onclick = function () {
+				const inputAddresses = document.getElementById("inputAddresses");
+				const addresses = inputAddresses.value
+					.split(',')
+					.map(a => a.replace(/[^A-Z0-9]+/ig, ''))// Remove undesirable characters.
+					.filter(a => a.length != 0);// Remove empty addresses.
+
+				if (addresses.length == 0) {
+					alert(`No valid addresses to add.`);
+					return;
 				}
+
+				inputAddresses.value = '';
+
+				// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
+				const addressInfos = getAddressInfosFromLocalStorage().concat(addresses.map(a => new AddressInfo(a)));
+
+				setupAddressInfosAndRender(addressInfos);
 			};
-			request.send();
+
+			setupAddressInfosAndRender(getAddressInfosFromLocalStorage());
 		}
 
 	</script>
@@ -267,101 +336,6 @@
 		</table>
 
 	</div>
-
-	<script>
-
-		// Hide table while loading data.
-		document.getElementById("addressesTable").style.display = 'none';
-
-		function renderTable(addressInfos, price) {
-			setAddressInfosInLocalStorage(addressInfos);
-			setPriceInLocalStorage(price);
-			const addressesTable = document.getElementById("addressesTable");
-			if (addressInfos.length == 0) {
-				addressesTable.innerHTML = '';
-				addressesTable.style.display = 'none';
-				return;
-			}
-			addressesTable.style.display = '';
-			let tableInnerHTML = "<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>";
-			for (let i = 0; i < addressInfos.length; i++) {
-
-				// Hover text using AddressInfo note.
-				const addressNoteTitleHTML = (addressInfos.note ? ' title="' + addressInfos.note + '"' : '');
-
-				tableInnerHTML +=
-					`<tr>
-						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
-						<td${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
-						<td>${addressInfos[i].address}</td>
-						<td class="textRight">${addressInfos[i].balance}</td>
-						<td class="textRight">${parseFloat(addressInfos[i].balance * price).toFixed(2)}</td>
-						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="🧱"></a></td>
-					</tr>`;
-			}
-
-			if (addressInfos.length > 1) {
-				const totalBalance = addressInfos.reduce((a, b) => a + b.balance, 0);
-				const totalValuation = addressInfos.reduce((a, b) => a + b.balance * price, 0);
-				tableInnerHTML +=
-					`<tr>
-						<th></th>
-						<th></th>
-						<th class="textRight">Total:</th>
-						<td class="textRight">${totalBalance}</td>
-						<td class="textRight">${parseFloat(totalValuation).toFixed(2)}</td>
-						<th></th>
-					</tr>`;
-			}
-
-			addressesTable.innerHTML = tableInnerHTML;
-		}
-
-		function download_onError(message) {
-			alert(`Error: ${message}`);
-		}
-
-		function downloadAddressInfosBalance_onFinished(addressInfos) {
-			downloadAddressInfosPrice(addressInfos, /* onFinished */renderTable, /* onError */download_onError);
-		}
-
-		function removeAddressInfosIndex(index) {
-			const addressInfos = getAddressInfosFromLocalStorage();
-			const price = getPriceFromLocalStorage();
-			addressInfos.splice(index, 1);
-			renderTable(addressInfos, price);
-		}
-
-		function updateAddressInfosLabelFromIndex(index, label) {
-			const addressInfos = getAddressInfosFromLocalStorage();
-			addressInfos[index].label = label;
-			setAddressInfosInLocalStorage(addressInfos);
-		}
-
-		document.getElementById("addAddressesButton").onclick = function () {
-			const inputAddresses = document.getElementById("inputAddresses");
-			const addresses = inputAddresses.value
-				.split(',')
-				.map(a => a.replace(/[^A-Z0-9]+/ig, ''))// Remove undesirable characters.
-				.filter(a => a.length != 0);// Remove empty addresses.
-
-			if (addresses.length == 0) {
-				alert(`No valid addresses to add.`);
-				return;
-			}
-
-			inputAddresses.value = '';
-
-			// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
-			const addressInfos = getAddressInfosFromLocalStorage().concat(addresses.map(a => new AddressInfo(a)));
-
-			// Download balance for each new AddressInfo and then update UI.
-			downloadAddressInfosBalance(addressInfos, /* onFinished */downloadAddressInfosBalance_onFinished, /* onError */download_onError);
-		};
-
-		downloadAddressInfosBalance(getAddressInfosFromLocalStorage(), /* onFinished */downloadAddressInfosBalance_onFinished, /* onError */download_onError);
-
-	</script>
 
 </body>
 
