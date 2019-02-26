@@ -173,9 +173,9 @@
 					`<tr>
 						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
 						<td${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
-						<td>${addressInfos[i].address}</td>
-						<td class="textRight">${addressInfos[i].balance}</td>
-						<td class="textRight">${parseFloat(addressInfos[i].balance * price).toFixed(2)}</td>
+						<td class="textLeft">${addressInfos[i].address}</td>
+						<td class="textRight">${addressInfos[i].balance.toLocaleString()}</td>
+						<td class="textRight">${(addressInfos[i].balance * price).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
 						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="🧱"></a></td>
 					</tr>`;
 			}
@@ -189,8 +189,8 @@
 						<th></th>
 						<th></th>
 						<th class="textRight">Total:</th>
-						<td class="textRight">${totalBalance}</td>
-						<td class="textRight">${parseFloat(totalValuation).toFixed(2)}</td>
+						<td class="textRight">${totalBalance.toLocaleString()}</td>
+						<td class="textRight">${totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
 						<th></th>
 					</tr>`;
 			}
@@ -306,8 +306,18 @@
 			display: inline-block;
 		}
 
+		.textLeft {
+			text-align: left;
+		}
+
 		.textRight {
 			text-align: right;
+		}
+
+		td.textRight,
+		td.textLeft {
+			padding-left: 0.6em;
+			padding-right: 0.6em;
 		}
 
 		.deleteAddressButton {
