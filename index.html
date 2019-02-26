@@ -68,10 +68,10 @@
 					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
 					const market_cap_usd = data.market_cap_usd;
 					const circulation = data.circulation;
-					if (!isNaN(market_cap_usd) && !isNaN(circulation) && circulation > 1763916464692325) {
-						return market_cap_usd / circulation;
+					if (isNaN(market_cap_usd) || isNaN(circulation) || circulation < 1763916464692325) {
+						throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
 					}
-					throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
+					return market_cap_usd / circulation;
 				});
 		}
 
@@ -111,18 +111,17 @@
 						}
 					*/
 					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
-					if (Array.isArray(data) && data.length == addressInfos.length) {
-						for (let i = 0; i < data.length; i++) {
-							const confirmed = data[i].confirmed;
-							const unconfirmed = data[i].unconfirmed;
-							if (!isNaN(confirmed) && !isNaN(unconfirmed)) {
-								addressInfos[i].balance = confirmed + unconfirmed;
-							}
-							// addressInfos[i].balance may be a number or the default initial value.
-						}
-						return;
+					if (!Array.isArray(data) || data.length != addressInfos.length) {
+						throw new Error('Invalid data received when fetching address balances');
 					}
-					throw new Error('Invalid data received when fetching address balances');
+					for (let i = 0; i < data.length; i++) {
+						const confirmed = data[i].confirmed;
+						const unconfirmed = data[i].unconfirmed;
+						if (!isNaN(confirmed) && !isNaN(unconfirmed)) {
+							addressInfos[i].balance = confirmed + unconfirmed;
+						}
+						// addressInfos[i].balance may be a number or the default initial value.
+					}
 				});
 		}
 
@@ -232,10 +231,7 @@
 				});
 		}
 
-		window.onload = function() {
-			// Hide table before loading data.
-			document.getElementById("addressesTable").style.display = 'none';
-
+		window.onload = function () {
 			document.getElementById("addAddressesButton").onclick = function () {
 				const inputAddresses = document.getElementById("inputAddresses");
 				const addresses = inputAddresses.value
@@ -255,6 +251,9 @@
 
 				setupAddressInfosAndRender(addressInfos);
 			};
+
+			// Hide table before loading data.
+			document.getElementById("addressesTable").style.display = 'none';
 
 			const addressInfos = getAddressInfosFromLocalStorage();
 			if (addressInfos.length) {
