@@ -166,6 +166,11 @@
 			let tableInnerHTML = "<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>";
 
 			for (let i = 0; i < addressInfos.length; i++) {
+				const balance = addressInfos[i].balance;
+				const valuation = balance == null || price == null ? null : balance * price;
+				const balanceDisplayString = balance == null ? '' : balance.toLocaleString();
+				const valuationDisplayString = valuation == null ? '' : valuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
 				// Hover text using AddressInfo note.
 				const addressNoteTitleHTML = (addressInfos.note ? ' title="' + addressInfos.note + '"' : '');
 
@@ -174,16 +179,16 @@
 						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
 						<td${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
 						<td class="textLeft">${addressInfos[i].address}</td>
-						<td class="textRight">${addressInfos[i].balance.toLocaleString()}</td>
-						<td class="textRight">${(addressInfos[i].balance * price).toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
-						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="🧱"></a></td>
+						<td class="textRight">${balanceDisplayString}</td>
+						<td class="textRight">${valuationDisplayString}</td>
+						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="View"></a></td>
 					</tr>`;
 			}
 
 			// Display total values.
 			if (addressInfos.length > 1) {
-				const totalBalance = addressInfos.reduce((a, b) => a + b.balance, 0);
-				const totalValuation = addressInfos.reduce((a, b) => a + b.balance * price, 0);
+				const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
+				const totalValuation = addressInfos.reduce((t, address) => t + (address.balance && price ? address.balance * price : 0), 0);
 				tableInnerHTML +=
 					`<tr>
 						<th></th>
@@ -251,7 +256,10 @@
 				setupAddressInfosAndRender(addressInfos);
 			};
 
-			setupAddressInfosAndRender(getAddressInfosFromLocalStorage());
+			const addressInfos = getAddressInfosFromLocalStorage();
+			if (addressInfos.length) {
+				setupAddressInfosAndRender(addressInfos);
+			}
 		}
 
 	</script>
