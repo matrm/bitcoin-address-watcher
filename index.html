@@ -20,6 +20,8 @@
 		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
 		const PRICE_LOCAL_STORAGE_KEY = 'price';
 
+		let confirmDeletingAddressAfterTime = new Date().getTime();
+
 		function setAddressInfosInLocalStorage(addressInfos) {
 			localStorage.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, JSON.stringify(addressInfos));
 		}
@@ -197,10 +199,18 @@
 		}
 
 		function removeAddressInfosIndex(index) {
+			if (
+				new Date().getTime() > confirmDeletingAddressAfterTime &&
+				!confirm(`Remove address ${index + 1}?`)
+			) {
+				// Prevent accidentally removing an address.
+				return;
+			}
 			const addressInfos = getAddressInfosFromLocalStorage();
 			const price = getPriceFromLocalStorage();
 			addressInfos.splice(index, 1);
 			renderTable(addressInfos, price);
+			confirmDeletingAddressAfterTime = new Date().getTime() + 3000;
 		}
 
 		function updateAddressInfosLabelFromIndex(index, label) {
