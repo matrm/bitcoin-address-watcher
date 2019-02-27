@@ -23,6 +23,7 @@
 		let confirmDeletingAddressAfterTime = new Date().getTime();
 
 		function setAddressInfosInLocalStorage(addressInfos) {
+			console.assert(Array.isArray(addressInfos));
 			localStorage.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, JSON.stringify(addressInfos));
 		}
 
@@ -39,6 +40,10 @@
 		}
 
 		function setPriceInLocalStorage(price) {
+			if (price == null) {
+				return;
+			}
+			console.assert(!isNaN(price));
 			localStorage.setItem(PRICE_LOCAL_STORAGE_KEY, price.toString());
 		}
 
@@ -143,9 +148,17 @@
 			return { addressInfos, price };
 		}
 
-		function renderTable(addressInfos, price) {
+		function render(addressInfos, price) {
 			setAddressInfosInLocalStorage(addressInfos);
 			setPriceInLocalStorage(price);
+
+			const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
+			const totalValuation = addressInfos.reduce((t, address) => t + (address.balance && price ? address.balance * price : 0), 0);
+			const totalBalanceDisplayString = totalBalance.toLocaleString();
+			const totalValuationDisplayString = totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+			document.getElementById('totalBalanceHeader').innerHTML = `Balance: ${totalBalanceDisplayString}`;
+			document.getElementById('totalValuationHeader').innerHTML = `${totalValuationDisplayString} USD`;
 
 			const addressesTable = document.getElementById("addressesTable");
 
@@ -179,11 +192,6 @@
 					</tr>`;
 			}
 
-			const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
-			const totalValuation = addressInfos.reduce((t, address) => t + (address.balance && price ? address.balance * price : 0), 0);
-			const totalBalanceDisplayString = totalBalance.toLocaleString();
-			const totalValuationDisplayString = totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-
 			if (addressInfos.length > 1) {
 				tableInnerHTML +=
 					`<tr>
@@ -196,8 +204,6 @@
 					</tr>`;
 			}
 
-			document.getElementById('totalBalanceHeader').innerHTML = `Balance: ${totalBalanceDisplayString}`;
-			document.getElementById('totalValuationHeader').innerHTML = `${totalValuationDisplayString} USD`;
 			addressesTable.innerHTML = tableInnerHTML;
 		}
 
@@ -212,7 +218,7 @@
 			const addressInfos = getAddressInfosFromLocalStorage();
 			const price = getPriceFromLocalStorage();
 			addressInfos.splice(index, 1);
-			renderTable(addressInfos, price);
+			render(addressInfos, price);
 			confirmDeletingAddressAfterTime = new Date().getTime() + 3000;
 		}
 
@@ -226,7 +232,7 @@
 		function setupAddressInfosAndRender(addressInfos, scrollOnSuccess = false) {
 			fetchAddressInfosAndPrice(addressInfos)
 				.then(addressInfosAndPrice => {
-					renderTable(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
+					render(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
 					if (scrollOnSuccess) {
 						window.scrollTo(0, document.body.scrollHeight);
 					}
@@ -263,6 +269,10 @@
 			document.getElementById("addressesTable").style.display = 'none';
 
 			const addressInfos = getAddressInfosFromLocalStorage();
+
+			// Render before fetching any external data.
+			render(addressInfos, getPriceFromLocalStorage());
+
 			if (addressInfos.length) {
 				setupAddressInfosAndRender(addressInfos);
 			}
