@@ -43,7 +43,7 @@
 			if (price == null) {
 				return;
 			}
-			console.assert(!isNaN(price));
+			console.assert(typeof price == 'number');
 			localStorage.setItem(PRICE_LOCAL_STORAGE_KEY, price.toString());
 		}
 
@@ -73,7 +73,7 @@
 					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
 					const market_cap_usd = data.market_cap_usd;
 					const circulation = data.circulation;
-					if (isNaN(market_cap_usd) || isNaN(circulation) || circulation < 1763916464692325) {
+					if (typeof market_cap_usd != 'number' || typeof circulation != 'number' || circulation < 1763916464692325) {
 						throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
 					}
 					return market_cap_usd / circulation;
@@ -122,7 +122,7 @@
 					for (let i = 0; i < data.length; i++) {
 						const confirmed = data[i].confirmed;
 						const unconfirmed = data[i].unconfirmed;
-						if (!isNaN(confirmed) && !isNaN(unconfirmed)) {
+						if (typeof confirmed == 'number' && typeof unconfirmed == 'number') {
 							addressInfos[i].balance = confirmed + unconfirmed;
 						}
 						// addressInfos[i].balance may be a number or the default initial value.
@@ -143,7 +143,7 @@
 
 			await fetchAddressBalances(addressInfos);
 
-			const price = await pricePromise;// May be NaN because of getPriceFromLocalStorage();
+			const price = await pricePromise;
 
 			return { addressInfos, price };
 		}
