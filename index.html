@@ -136,12 +136,7 @@
 					return getPriceFromLocalStorage();
 				});
 
-			await fetchAddressBalances(addressInfos)
-				.catch(error => {
-					const errorMessage = `Error fetching address balances: ${error.message}`;
-					console.log(errorMessage);
-					alert(errorMessage);
-				});
+			await fetchAddressBalances(addressInfos);
 
 			const price = await pricePromise;// May be NaN because of getPriceFromLocalStorage();
 
@@ -228,6 +223,11 @@
 			fetchAddressInfosAndPrice(addressInfos)
 				.then(addressInfosAndPrice => {
 					renderTable(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
+				})
+				.catch(error => {
+					const errorMessage = `Error fetching address balances: ${error.message}`;
+					console.log(errorMessage);
+					alert(errorMessage);
 				});
 		}
 
