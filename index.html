@@ -179,21 +179,25 @@
 					</tr>`;
 			}
 
-			// Display total values.
+			const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
+			const totalValuation = addressInfos.reduce((t, address) => t + (address.balance && price ? address.balance * price : 0), 0);
+			const totalBalanceDisplayString = totalBalance.toLocaleString();
+			const totalValuationDisplayString = totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
 			if (addressInfos.length > 1) {
-				const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
-				const totalValuation = addressInfos.reduce((t, address) => t + (address.balance && price ? address.balance * price : 0), 0);
 				tableInnerHTML +=
 					`<tr>
 						<th></th>
 						<th></th>
 						<th class="textRight">Total:</th>
-						<td class="textRight">${totalBalance.toLocaleString()}</td>
-						<td class="textRight">${totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</td>
+						<td class="textRight">${totalBalanceDisplayString}</td>
+						<td class="textRight">${totalValuationDisplayString}</td>
 						<th></th>
 					</tr>`;
 			}
 
+			document.getElementById('totalBalanceHeader').innerHTML = `Balance: ${totalBalanceDisplayString}`;
+			document.getElementById('totalValuationHeader').innerHTML = `${totalValuationDisplayString} USD`;
 			addressesTable.innerHTML = tableInnerHTML;
 		}
 
@@ -273,7 +277,6 @@
 		table {
 			background: #002;
 			margin: 0 auto;
-			margin-bottom: 10em;
 			border: 0.1em solid #666;
 			font-size: 1.2em;
 			border-spacing: 0.2em;
@@ -309,7 +312,7 @@
 		}
 
 		.container {
-			margin: 0 auto;
+			margin: 0 auto 20em;
 			display: inline-block;
 		}
 
@@ -351,7 +354,8 @@
 
 	<div class="container">
 
-		<h1 style="text-align: center; margin-top: 1em;">Bitcoin Address Watcher</h1>
+		<h1 id="totalBalanceHeader"></h1>
+		<h1 id="totalValuationHeader"></h1>
 
 		<div style="text-align: center; margin-bottom: 1em;">
 			<input id="inputAddresses" class="labelInput" type="text" size="64"
