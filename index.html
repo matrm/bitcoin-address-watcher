@@ -223,10 +223,13 @@
 		}
 
 		// Download balance for each new AddressInfo, update price, and then update UI.
-		function setupAddressInfosAndRender(addressInfos) {
+		function setupAddressInfosAndRender(addressInfos, scrollOnSuccess = false) {
 			fetchAddressInfosAndPrice(addressInfos)
 				.then(addressInfosAndPrice => {
 					renderTable(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
+					if (scrollOnSuccess) {
+						window.scrollTo(0, document.body.scrollHeight);
+					}
 				})
 				.catch(error => {
 					const errorMessage = `Error fetching address balances: ${error.message}`;
@@ -253,7 +256,7 @@
 				// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
 				const addressInfos = getAddressInfosFromLocalStorage().concat(addresses.map(a => new AddressInfo(a)));
 
-				setupAddressInfosAndRender(addressInfos);
+				setupAddressInfosAndRender(addressInfos, /* scrollOnSuccess */true);
 			};
 
 			// Hide table before loading data.
@@ -312,7 +315,7 @@
 		}
 
 		.container {
-			margin: 0 auto 20em;
+			margin: 0 auto 10em;
 			display: inline-block;
 		}
 
