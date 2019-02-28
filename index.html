@@ -179,7 +179,7 @@
 				const valuationDisplayString = valuation == null ? '' : valuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 				// Hover text using AddressInfo note.
-				const addressNoteTitleHTML = (addressInfos.note ? ' title="' + addressInfos.note + '"' : '');
+				const addressNoteTitleHTML = addressInfos.note ? ' title="' + addressInfos.note + '"' : '';
 
 				tableInnerHTML +=
 					`<tr>
