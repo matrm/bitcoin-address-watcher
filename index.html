@@ -48,7 +48,7 @@
 				try {
 					const parsedJSON = JSON.parse(addressInfosString);
 					const addressInfos = [];
-					for (addressInfoData of parsedJSON) {
+					for (let addressInfoData of parsedJSON) {
 						// Convert to new AddressInfo because the serialized json has no functions.
 						const addressInfo = new AddressInfo();
 						Object.assign(addressInfo, addressInfoData);
@@ -80,6 +80,29 @@
 				}
 			}
 			return null;
+		}
+
+		function backupToFile() {
+			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
+
+			localStorageString = (() => {
+				const ls = {};
+				for (var i = 0; i < localStorage.length; i++) {
+					var k = localStorage.key(i);
+					var v = localStorage.getItem(k);
+					ls[k] = v;
+				}
+				return JSON.stringify(ls);
+			})();
+
+			// https://stackoverflow.com/a/18197341
+			const element = document.createElement('a');
+			element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(localStorageString));
+			element.setAttribute('download', suggestedFileName);
+			element.style.display = 'none';
+			document.body.appendChild(element);
+			element.click();
+			document.body.removeChild(element);
 		}
 
 		async function fetchPrice() {
@@ -286,8 +309,51 @@
 				});
 		}
 
+		function renderUpdateRender() {
+			const addressInfos = getAddressInfosFromLocalStorage();
+
+			// Unset all the balanceLastUpdate because rendering balance changes the first time is pointless.
+			const defaultBalanceLastUpdate = new AddressInfo().balanceLastUpdate;
+			for (let addressInfo of addressInfos) {
+				addressInfo.balanceLastUpdate = defaultBalanceLastUpdate;
+			}
+
+			// Render before fetching any external data.
+			render(addressInfos, getPriceFromLocalStorage());
+
+			if (addressInfos.length) {
+				setupAddressInfosAndRender(addressInfos);
+			}
+		}
+
+		function loadFromFileAndRender(inputTarget) {
+			// https://stackoverflow.com/a/29176118
+			const reader = new FileReader();
+			reader.onload = function () {
+				const text = reader.result;
+				try {
+					const parsedJSON = JSON.parse(text);
+					for (const [key, value] of Object.entries(parsedJSON)) {
+						localStorage.setItem(key, value);
+					}
+					console.log('Loaded from file.');
+					renderUpdateRender();
+				} catch (err) {
+					console.log('Unable to parse JSON backup file:', err.message);
+				}
+			};
+			reader.onerror = function (event) {
+				reader.abort();
+				const errorMessage = 'Error reading file.';
+				console.log(errorMessage);
+				alert(errorMessage);
+			};
+			reader.readAsText(inputTarget.files[0]);
+			inputTarget.value = '';// Reset value so onchange() works when reloading from file again.
+		}
+
 		window.onload = function () {
-			document.getElementById("addAddressesButton").onclick = function () {
+			document.getElementById('addAddressesButton').onclick = function () {
 				const inputAddresses = document.getElementById("inputAddresses");
 				const addresses = inputAddresses.value
 					.split(',')
@@ -308,16 +374,9 @@
 			};
 
 			// Hide table before loading data.
-			document.getElementById("addressesTable").style.display = 'none';
+			document.getElementById('addressesTable').style.display = 'none';
 
-			const addressInfos = getAddressInfosFromLocalStorage();
-
-			// Render before fetching any external data.
-			render(addressInfos, getPriceFromLocalStorage());
-
-			if (addressInfos.length) {
-				setupAddressInfosAndRender(addressInfos);
-			}
+			renderUpdateRender();
 		}
 
 	</script>
@@ -407,7 +466,16 @@
 			color: #ddd;
 			border: 0.1em solid #666;
 			text-align: center;
-			font-size: 1.1em;
+			padding: 0.05em 0.4em;
+			text-decoration: none;
+			font: 400 1.1em Arial;
+			text-rendering: auto;
+			letter-spacing: normal;
+			word-spacing: normal;
+			text-transform: none;
+			text-indent: 0px;
+			text-shadow: none;
+			display: inline-block;
 		}
 	</style>
 
@@ -428,6 +496,13 @@
 
 		<table id="addressesTable">
 		</table>
+
+		<input id="saveBackupFileButton" style="margin-top: 1em;" class="labelInput" type="button" value="Save Backup File" onclick="backupToFile()" />
+
+		<label class="labelInput" style="margin-top: 1em;">
+			<input id="loadBackupFileButton" style="display: none;" type="file" accept=".json,.txt" onchange="loadFromFileAndRender(event.target)" />
+			Load Backup File
+		</label>
 
 	</div>
 
