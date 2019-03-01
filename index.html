@@ -8,12 +8,27 @@
 	<script>
 
 		class AddressInfo {
-			constructor(address, label = '', note = '') {
+			constructor(address = '', label = '', note = '', balanceLastUpdate = null, balance = null, spent = null) {
 				this.address = address;
 				this.label = label;
 				this.note = note;
-				this.balance = null;
-				this.spent = null;
+				this.balanceLastUpdate = balanceLastUpdate;
+				this.balance = balance;
+				this.spent = spent;
+			}
+			get balanceChange() {
+				return this.balanceLastUpdate == null && this.balance == null
+					? 0
+					: (
+						this.balance
+						? (
+							// balanceLastUpdate may still be null. balance is > 0.
+							// Uses 0 when first time updating balance (when balanceLastUpdate is null).
+							// Safe to change the ': 0' to ': this.balance'.
+							this.balanceLastUpdate ? this.balance - this.balanceLastUpdate : 0
+						)
+						: 0
+					);
 			}
 		}
 
@@ -31,7 +46,15 @@
 			const addressInfosString = localStorage.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY);
 			if (addressInfosString) {
 				try {
-					return JSON.parse(addressInfosString);
+					const parsedJSON = JSON.parse(addressInfosString);
+					const addressInfos = [];
+					for (addressInfoData of parsedJSON) {
+						// Convert to new AddressInfo because the serialized json has no functions.
+						const addressInfo = new AddressInfo();
+						Object.assign(addressInfo, addressInfoData);
+						addressInfos.push(addressInfo);
+					}
+					return addressInfos;
 				} catch (err) {
 					console.log('Unable to parse address info from localStorage:', err.message);
 				}
@@ -123,6 +146,7 @@
 						const confirmed = data[i].confirmed;
 						const unconfirmed = data[i].unconfirmed;
 						if (typeof confirmed == 'number' && typeof unconfirmed == 'number') {
+							addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
 							addressInfos[i].balance = confirmed + unconfirmed;
 						}
 						// addressInfos[i].balance may be a number or the default initial value.
@@ -153,6 +177,7 @@
 			setPriceInLocalStorage(price);
 
 			const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
+			const totalBalanceChange = addressInfos.reduce((t, address) => t + address.balanceChange, 0);
 			const totalValuation = addressInfos.reduce((t, address) => t + (address.balance && price ? address.balance * price : 0), 0);
 			const totalBalanceDisplayString = totalBalance.toLocaleString();
 			const totalValuationDisplayString = totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -173,7 +198,12 @@
 			let tableInnerHTML = "<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>";
 
 			for (let i = 0; i < addressInfos.length; i++) {
+				const balanceLastUpdate = addressInfos[i].balanceLastUpdate;
 				const balance = addressInfos[i].balance;
+				const balanceChange = addressInfos[i].balanceChange;
+				if (balanceChange != 0) {
+					console.log(`Balance change for address ${i + 1}: ${balanceChange} (from ${balanceLastUpdate} to ${balance}).`);
+				}
 				const valuation = balance == null || price == null ? null : balance * price;
 				const balanceDisplayString = balance == null ? '' : balance.toLocaleString();
 				const valuationDisplayString = valuation == null ? '' : valuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -181,24 +211,36 @@
 				// Hover text using AddressInfo note.
 				const addressNoteTitleHTML = addressInfos.note ? ' title="' + addressInfos.note + '"' : '';
 
+				const balanceTableDataColorClass = balanceChange == 0 ? '' : (balanceChange > 0 ? ' increaseColor' : ' decreaseColor');
+				const balanceTableDataTitle = balanceChange == 0 ? '' : ` title="${(balanceChange > 0 ? '+' + balanceChange : '-' + Math.abs(balanceChange))}"`;
+				const balanceTableData = `<td class="textRight${balanceTableDataColorClass}"${balanceTableDataTitle}>${balanceDisplayString}</td>`;
+
 				tableInnerHTML +=
 					`<tr>
 						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
 						<td${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
 						<td class="textLeft">${addressInfos[i].address}</td>
-						<td class="textRight">${balanceDisplayString}</td>
+						${balanceTableData}
 						<td class="textRight">${valuationDisplayString}</td>
 						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="View"></a></td>
 					</tr>`;
 			}
 
 			if (addressInfos.length > 1) {
+				if (totalBalanceChange != 0) {
+					console.log(`Total balance change: ${totalBalanceChange}.`);
+				}
+
+				const totalBalanceTableDataColorClass = totalBalanceChange == 0 ? '' : (totalBalanceChange > 0 ? ' increaseColor' : ' decreaseColor');
+				const totalBalanceTableDataTitle = totalBalanceChange == 0 ? '' : ` title="${(totalBalanceChange > 0 ? '+' + totalBalanceChange : '-' + Math.abs(totalBalanceChange))}"`;
+				const totalBalanceTableData = `<td class="textRight${totalBalanceTableDataColorClass}"${totalBalanceTableDataTitle}>${totalBalanceDisplayString}</td>`;
+
 				tableInnerHTML +=
 					`<tr>
 						<th></th>
 						<th></th>
 						<th class="textRight">Total:</th>
-						<td class="textRight">${totalBalanceDisplayString}</td>
+						${totalBalanceTableData}
 						<td class="textRight">${totalValuationDisplayString}</td>
 						<th></th>
 					</tr>`;
@@ -341,6 +383,14 @@
 		td.textLeft {
 			padding-left: 0.6em;
 			padding-right: 0.6em;
+		}
+
+		.increaseColor {
+			color: #0d0;
+		}
+
+		.decreaseColor {
+			color: #d00;
 		}
 
 		.deleteAddressButton {
