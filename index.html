@@ -241,7 +241,7 @@
 				tableInnerHTML +=
 					`<tr>
 						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
-						<td${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
+						<td${addressNoteTitleHTML} style="padding: 0;"><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
 						<td class="textLeft">${addressInfos[i].address}</td>
 						${balanceTableData}
 						<td class="textRight">${valuationDisplayString}</td>
@@ -392,7 +392,6 @@
 			background: #002;
 			margin: 0 auto;
 			border: 0.1em solid #666;
-			font-size: 1.2em;
 			border-spacing: 0.2em;
 		}
 
