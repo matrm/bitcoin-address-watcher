@@ -235,7 +235,7 @@
 				const addressNoteTitleHTML = addressInfos.note ? ' title="' + addressInfos.note + '"' : '';
 
 				const balanceTableDataColorClass = balanceChange == 0 ? '' : (balanceChange > 0 ? ' increaseColor' : ' decreaseColor');
-				const balanceTableDataTitle = balanceChange == 0 ? '' : ` title="${(balanceChange > 0 ? '+' + balanceChange : '-' + Math.abs(balanceChange))}"`;
+				const balanceTableDataTitle = balanceChange == 0 ? '' : ` title="${(balanceChange > 0 ? '+' + balanceChange.toLocaleString() : '-' + Math.abs(balanceChange).toLocaleString())}"`;
 				const balanceTableData = `<td class="textRight${balanceTableDataColorClass}"${balanceTableDataTitle}>${balanceDisplayString}</td>`;
 
 				tableInnerHTML +=
@@ -255,7 +255,7 @@
 				}
 
 				const totalBalanceTableDataColorClass = totalBalanceChange == 0 ? '' : (totalBalanceChange > 0 ? ' increaseColor' : ' decreaseColor');
-				const totalBalanceTableDataTitle = totalBalanceChange == 0 ? '' : ` title="${(totalBalanceChange > 0 ? '+' + totalBalanceChange : '-' + Math.abs(totalBalanceChange))}"`;
+				const totalBalanceTableDataTitle = totalBalanceChange == 0 ? '' : ` title="${(totalBalanceChange > 0 ? '+' + totalBalanceChange.toLocaleString() : '-' + Math.abs(totalBalanceChange).toLocaleString())}"`;
 				const totalBalanceTableData = `<td class="textRight${totalBalanceTableDataColorClass}"${totalBalanceTableDataTitle}>${totalBalanceDisplayString}</td>`;
 
 				tableInnerHTML +=
