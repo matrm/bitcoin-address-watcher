@@ -240,7 +240,7 @@
 
 				tableInnerHTML +=
 					`<tr>
-						<td class="tdWithInput"><button type="button" class="labelInput deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
+						<td class="tdWithInput"><button type="button" class="labelInput labelInputButton deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
 						<td class="tdWithInput"${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
 						<td class="textLeft">${addressInfos[i].address}</td>
 						${balanceTableData}
@@ -485,6 +485,10 @@
 			padding: 0;
 			background-color: transparent;
 		}
+
+		.labelInputButton {
+			cursor: pointer;
+		}
 	</style>
 
 </head>
@@ -499,15 +503,15 @@
 		<div style="text-align: center; margin-bottom: 1em;">
 			<input id="inputAddresses" class="labelInput" type="text" size="64"
 				placeholder="Input one or more addresses separated by commas" />
-			<input id="addAddressesButton" class="labelInput" type="button" value="Add Addresses" />
+			<input id="addAddressesButton" class="labelInput labelInputButton" type="button" value="Add Addresses" />
 		</div>
 
 		<table id="addressesTable">
 		</table>
 
-		<input id="saveBackupFileButton" class="labelInput" type="button" value="Save Backup File" onclick="backupToFile()" />
+		<input id="saveBackupFileButton" class="labelInput labelInputButton" type="button" value="Save Backup File" onclick="backupToFile()" />
 
-		<label class="labelInput">
+		<label class="labelInput labelInputButton">
 			<input id="loadBackupFileButton" style="display: none;" type="file" accept=".json,.txt" onchange="loadFromFileAndRender(event.target)" />
 			Load Backup File
 		</label>
