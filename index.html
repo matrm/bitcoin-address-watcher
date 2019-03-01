@@ -240,12 +240,16 @@
 
 				tableInnerHTML +=
 					`<tr>
-						<td><button type="button" class="deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
-						<td${addressNoteTitleHTML} style="padding: 0;"><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
+						<td class="tdWithInput"><button type="button" class="labelInput deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
+						<td class="tdWithInput"${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
 						<td class="textLeft">${addressInfos[i].address}</td>
 						${balanceTableData}
 						<td class="textRight">${valuationDisplayString}</td>
-						<td><a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer"><img src="https://blockchair.com/favicon.ico" alt="View"></a></td>
+						<td style="padding: 0;">
+							<a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer">
+								<img src="https://blockchair.com/favicon.ico" alt="View">
+							</a>
+						</td>
 					</tr>`;
 			}
 
@@ -390,13 +394,14 @@
 
 		table {
 			background: #002;
-			margin: 0 auto;
+			margin: 0 auto 0.5em;
 			border: 0.1em solid #666;
 			border-spacing: 0.2em;
+			font-size: 1.1em;
 		}
 
 		th {
-			background-color: #008;
+			background-color: #005;
 			color: #ddd;
 			vertical-align: middle;
 			padding: 0.2em;
@@ -404,17 +409,20 @@
 		}
 
 		td {
-			background-color: #006;
+			background-color: #004;
 			color: #eee;
 			vertical-align: middle;
 			padding: 0.2em;
 			font-family: "Courier New", Courier, monospace;
+			min-width: 1.8em;
 		}
 
 		td img {
 			display: block;
-			height: 100%;
-			width: auto;
+			object-fit: contain;
+			height: 1.7em;
+			max-width: 16em;
+			margin: 0 auto;
 		}
 
 		a,
@@ -451,21 +459,12 @@
 			color: #d00;
 		}
 
-		.deleteAddressButton {
-			background-color: #000;
-			color: #d00;
-			border: 0.1em solid #666;
-			border-radius: 0.3em;
-			font-size: 1em;
-
-		}
-
 		.labelInput {
 			background-color: #000;
 			color: #ddd;
 			border: 0.1em solid #666;
 			text-align: center;
-			padding: 0.05em 0.4em;
+			padding: 0.1em 0.4em;
 			text-decoration: none;
 			font: 400 1.1em Arial;
 			text-rendering: auto;
@@ -475,6 +474,16 @@
 			text-indent: 0px;
 			text-shadow: none;
 			display: inline-block;
+			border-radius: 0.3em;
+		}
+
+		.deleteAddressButton {
+			color: #d00;
+		}
+
+		.tdWithInput {
+			padding: 0;
+			background-color: transparent;
 		}
 	</style>
 
@@ -496,9 +505,9 @@
 		<table id="addressesTable">
 		</table>
 
-		<input id="saveBackupFileButton" style="margin-top: 1em;" class="labelInput" type="button" value="Save Backup File" onclick="backupToFile()" />
+		<input id="saveBackupFileButton" class="labelInput" type="button" value="Save Backup File" onclick="backupToFile()" />
 
-		<label class="labelInput" style="margin-top: 1em;">
+		<label class="labelInput">
 			<input id="loadBackupFileButton" style="display: none;" type="file" accept=".json,.txt" onchange="loadFromFileAndRender(event.target)" />
 			Load Backup File
 		</label>
