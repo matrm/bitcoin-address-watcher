@@ -655,16 +655,15 @@
 
 		<input id="inputAddresses" class="labelInput" type="text" size="64"
 			placeholder="Input one or more addresses separated by commas" />
-		<input class="labelInput labelInputButton" type="button" value="Add Addresses"
-			onclick="addInputAddresses()" />
+		<input class="labelInput labelInputButton" type="button" value="Add Addresses" onclick="addInputAddresses()" />
 
 		<div id="addressesTableContainer"></div>
 
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Balance of 0"
-			onclick="removeAddressInfosBalanceOfZero()" />
-
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Label"
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Specific Label"
 			onclick="removeAddressInfosWithPromptLabel()" />
+
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Valueless"
+			onclick="removeAddressInfosBalanceOfZero()" />
 
 		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove All"
 			onclick="removeAddressInfos()" />
