@@ -222,9 +222,10 @@
 			let tableInnerHTML = '<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>';
 
 			for (let i = 0; i < addressInfos.length; i++) {
-				const balanceLastUpdate = addressInfos[i].balanceLastUpdate;
-				const balance = addressInfos[i].balance;
-				const balanceChange = addressInfos[i].balanceChange;
+				const addressInfo = addressInfos[i];
+				const balanceLastUpdate = addressInfo.balanceLastUpdate;
+				const balance = addressInfo.balance;
+				const balanceChange = addressInfo.balanceChange;
 				if (balanceChange != 0) {
 					console.log(`Balance change for address ${i + 1}: ${balanceChange} (from ${balanceLastUpdate} to ${balance}).`);
 				}
@@ -233,7 +234,7 @@
 				const valuationDisplayString = valuation == null ? '' : valuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 				// Hover text using AddressInfo note.
-				const addressNoteTitleHTML = addressInfos.note ? ' title="' + addressInfos.note + '"' : '';
+				const addressNoteTitleHTML = addressInfo.note ? ' title="' + addressInfo.note + '"' : '';
 
 				const balanceTableDataColorClass = balanceChange == 0 ? '' : (balanceChange > 0 ? ' increaseColor' : ' decreaseColor');
 				const balanceTableDataTitle = balanceChange == 0 ? '' : ` title="${(balanceChange > 0 ? '+' + balanceChange.toLocaleString() : '-' + Math.abs(balanceChange).toLocaleString())}"`;
@@ -242,12 +243,12 @@
 				tableInnerHTML +=
 					`<tr>
 						<td class="tdWithInput"><button type="button" class="labelInput labelInputButton deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
-						<td class="tdWithInput"${addressNoteTitleHTML}><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfos[i].label}"></td>
-						<td class="textLeft">${addressInfos[i].address}</td>
+						<td class="tdWithInput"><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfo.label}"></td>
+						<td class="textLeft"${addressNoteTitleHTML}>${addressInfo.address}</td>
 						${balanceTableData}
 						<td class="textRight">${valuationDisplayString}</td>
 						<td style="padding: 0;">
-							<a href="https://blockchair.com/bitcoin-sv/address/${addressInfos[i].address}" target="_blank" title="View on block explorer">
+							<a href="https://blockchair.com/bitcoin-sv/address/${addressInfo.address}" target="_blank" title="View on block explorer">
 								<img src="https://blockchair.com/favicon.ico" alt="View">
 							</a>
 						</td>
