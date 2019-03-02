@@ -221,6 +221,7 @@
 			}
 
 			const addressesTable = document.createElement('table');
+			addressesTable.classList.add('standardMargin');
 
 			// First row.
 			addressesTable.appendChild((() => {
@@ -534,7 +535,6 @@
 
 		table {
 			background: #002;
-			margin: 0 auto 0.4em;
 			border: 0.1em solid #666;
 			border-spacing: 0.2em;
 			font-size: 1.1em;
@@ -592,8 +592,17 @@
 			padding-right: 0.6em;
 		}
 
+		td.tdWithInput {
+			padding: 0;
+			background-color: transparent;
+		}
+
 		td.tdImageButton {
 			padding: 0;
+		}
+
+		button.deleteAddressButton {
+			color: #d00;
 		}
 
 		.increaseColor {
@@ -622,15 +631,6 @@
 			border-radius: 0.3em;
 		}
 
-		.deleteAddressButton {
-			color: #d00;
-		}
-
-		.tdWithInput {
-			padding: 0;
-			background-color: transparent;
-		}
-
 		.labelInputButton {
 			cursor: pointer;
 		}
@@ -639,7 +639,7 @@
 			background-color: #005;
 		}
 
-		.bottomButton {
+		.standardMargin {
 			margin: 0.5em 0.16em 0;
 		}
 	</style>
@@ -653,30 +653,28 @@
 		<h1 id="totalBalanceHeader"></h1>
 		<h1 id="totalValuationHeader"></h1>
 
-		<div style="text-align: center; margin-bottom: 1em;">
-			<input id="inputAddresses" class="labelInput" type="text" size="64"
-				placeholder="Input one or more addresses separated by commas" />
-			<input id="addAddressesButton" class="labelInput labelInputButton" type="button" value="Add Addresses"
-				onclick="addInputAddresses()" />
-		</div>
+		<input id="inputAddresses" class="labelInput" type="text" size="64"
+			placeholder="Input one or more addresses separated by commas" />
+		<input class="labelInput labelInputButton" type="button" value="Add Addresses"
+			onclick="addInputAddresses()" />
 
 		<div id="addressesTableContainer"></div>
 
-		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove Balance of 0"
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Balance of 0"
 			onclick="removeAddressInfosBalanceOfZero()" />
 
-		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove Label"
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Label"
 			onclick="removeAddressInfosWithPromptLabel()" />
 
-		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove All"
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove All"
 			onclick="removeAddressInfos()" />
 
 		<br>
 
-		<input class="labelInput labelInputButton bottomButton" type="button" value="Save Backup"
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Save Backup"
 			onclick="backupToFile()" />
 
-		<label class="labelInput labelInputButton bottomButton">
+		<label class="labelInput labelInputButton standardMargin">
 			<input style="display: none;" type="file" accept=".json,.txt"
 				onchange="loadFromFileAndRender(event.target)" />
 			Load Backup
