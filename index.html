@@ -276,6 +276,36 @@
 			addressesTable.innerHTML = tableInnerHTML;
 		}
 
+		function removeAddressInfosBalanceOfZero() {
+			if (!confirm('Remove addresses with a balance of 0?'))
+			{
+				return;
+			}
+			render(
+				getAddressInfosFromLocalStorage().filter(address => address.balance),
+				getPriceFromLocalStorage()
+			);
+		}
+
+		function removeAddressInfosUnlabeled() {
+			if (!confirm('Remove addresses without a label?'))
+			{
+				return;
+			}
+			render(
+				getAddressInfosFromLocalStorage().filter(address => address.label),
+				getPriceFromLocalStorage()
+			);
+		}
+
+		function removeAddressInfos() {
+			if (!confirm('Remove all addresses?'))
+			{
+				return;
+			}
+			render(/* addressInfos */[], getPriceFromLocalStorage());
+		}
+
 		function removeAddressInfosIndex(index) {
 			if (
 				new Date().getTime() > confirmDeletingAddressAfterTime &&
@@ -394,7 +424,7 @@
 
 		table {
 			background: #002;
-			margin: 0 auto 0.5em;
+			margin: 0 auto 0.4em;
 			border: 0.1em solid #666;
 			border-spacing: 0.2em;
 			font-size: 1.1em;
@@ -489,6 +519,10 @@
 		.labelInputButton {
 			cursor: pointer;
 		}
+
+		.bottomButton {
+			margin: 0.5em 0.16em 0;
+		}
 	</style>
 
 </head>
@@ -509,14 +543,27 @@
 		<table id="addressesTable">
 		</table>
 
-		<input id="saveBackupFileButton" class="labelInput labelInputButton" type="button" value="Save Backup File"
+		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove Balance of 0"
+			onclick="removeAddressInfosBalanceOfZero()" />
+
+		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove All Unlabeled"
+			onclick="removeAddressInfosUnlabeled()" />
+
+		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove All"
+			onclick="removeAddressInfos()" />
+
+		<br>
+
+		<input class="labelInput labelInputButton bottomButton" type="button" value="Save Backup File"
 			onclick="backupToFile()" />
 
-		<label class="labelInput labelInputButton">
-			<input id="loadBackupFileButton" style="display: none;" type="file" accept=".json,.txt"
+		<label class="labelInput labelInputButton bottomButton">
+			<input style="display: none;" type="file" accept=".json,.txt"
 				onchange="loadFromFileAndRender(event.target)" />
 			Load Backup File
 		</label>
+
+		<br>
 
 	</div>
 
