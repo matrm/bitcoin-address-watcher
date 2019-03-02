@@ -277,8 +277,7 @@
 		}
 
 		function removeAddressInfosBalanceOfZero() {
-			if (!confirm('Remove addresses with a balance of 0?'))
-			{
+			if (!confirm('Remove addresses with a balance of 0?')) {
 				return;
 			}
 			render(
@@ -288,8 +287,7 @@
 		}
 
 		function removeAddressInfosUnlabeled() {
-			if (!confirm('Remove addresses without a label?'))
-			{
+			if (!confirm('Remove addresses without a label?')) {
 				return;
 			}
 			render(
@@ -299,8 +297,7 @@
 		}
 
 		function removeAddressInfos() {
-			if (!confirm('Remove all addresses?'))
-			{
+			if (!confirm('Remove all addresses?')) {
 				return;
 			}
 			render(/* addressInfos */[], getPriceFromLocalStorage());
