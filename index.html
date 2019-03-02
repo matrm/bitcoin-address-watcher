@@ -209,15 +209,15 @@
 			document.getElementById('totalBalanceHeader').innerHTML = `Balance: ${totalBalanceDisplayString}`;
 			document.getElementById('totalValuationHeader').innerHTML = `${totalValuationDisplayString} USD`;
 
-			const addressesTable = document.getElementById("addressesTable");
-
-			if (addressInfos.length == 0) {
-				addressesTable.innerHTML = '';
-				addressesTable.style.display = 'none';
-				return;
+			const addressesTableContainer = document.getElementById('addressesTableContainer');
+			while (addressesTableContainer.firstChild) {
+				// Remove table. https://stackoverflow.com/a/3955238
+				addressesTableContainer.removeChild(addressesTableContainer.firstChild);
 			}
 
-			addressesTable.style.display = '';
+			if (addressInfos.length == 0) {
+				return;
+			}
 
 			let tableInnerHTML = '<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>';
 
@@ -275,7 +275,9 @@
 					</tr>`;
 			}
 
+			const addressesTable = document.createElement('table');
 			addressesTable.innerHTML = tableInnerHTML;
+			addressesTableContainer.appendChild(addressesTable);
 		}
 
 		function removeAddressInfosBalanceOfZero() {
@@ -406,9 +408,6 @@
 
 				setupAddressInfosAndRender(addressInfos, /* scrollOnSuccess */true);
 			};
-
-			// Hide table before loading data.
-			document.getElementById('addressesTable').style.display = 'none';
 
 			renderUpdateRender();
 		}
@@ -545,8 +544,7 @@
 			<input id="addAddressesButton" class="labelInput labelInputButton" type="button" value="Add Addresses" />
 		</div>
 
-		<table id="addressesTable">
-		</table>
+		<div id="addressesTableContainer"></div>
 
 		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove Balance of 0"
 			onclick="removeAddressInfosBalanceOfZero()" />
