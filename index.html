@@ -210,8 +210,9 @@
 			document.getElementById('totalValuationHeader').innerHTML = `${totalValuationDisplayString} USD`;
 
 			const addressesTableContainer = document.getElementById('addressesTableContainer');
+
 			while (addressesTableContainer.firstChild) {
-				// Remove table. https://stackoverflow.com/a/3955238
+				// Remove current table. https://stackoverflow.com/a/3955238
 				addressesTableContainer.removeChild(addressesTableContainer.firstChild);
 			}
 
@@ -219,40 +220,133 @@
 				return;
 			}
 
-			let tableInnerHTML = '<tr><th></th><th>Label</th><th>Address</th><th>Balance</th><th>USD</th><th></th></tr>';
+			const addressesTable = document.createElement('table');
+
+			// First row.
+			addressesTable.appendChild((() => {
+				const tr = document.createElement('tr');
+				tr.appendChild(document.createElement('th'));
+				tr.appendChild((() => {
+					const th = document.createElement('th');
+					th.appendChild(document.createTextNode('Label'));
+					return th;
+				})());
+				tr.appendChild((() => {
+					const th = document.createElement('th');
+					th.appendChild(document.createTextNode('Address'));
+					return th;
+				})());
+				tr.appendChild((() => {
+					const th = document.createElement('th');
+					th.appendChild(document.createTextNode('Balance'));
+					return th;
+				})());
+				tr.appendChild((() => {
+					const th = document.createElement('th');
+					th.appendChild(document.createTextNode('USD'));
+					return th;
+				})());
+				tr.appendChild(document.createElement('th'));
+				return tr;
+			})());
 
 			for (let i = 0; i < addressInfos.length; i++) {
 				const addressInfo = addressInfos[i];
 				const balanceLastUpdate = addressInfo.balanceLastUpdate;
 				const balance = addressInfo.balance;
 				const balanceChange = addressInfo.balanceChange;
-				if (balanceChange != 0) {
-					console.log(`Balance change for address ${i + 1}: ${balanceChange} (from ${balanceLastUpdate} to ${balance}).`);
-				}
 				const valuation = balance == null || price == null ? null : balance * price;
 				const balanceDisplayString = balance == null ? '' : balance.toLocaleString();
 				const valuationDisplayString = valuation == null ? '' : valuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-				// Hover text using AddressInfo note.
-				const addressNoteTitleHTML = addressInfo.note ? ' title="' + addressInfo.note + '"' : '';
+				if (balanceChange != 0) {
+					console.log(`Balance change for address ${i + 1}: ${balanceChange} (from ${balanceLastUpdate} to ${balance}).`);
+				}
 
-				const balanceTableDataColorClass = balanceChange == 0 ? '' : (balanceChange > 0 ? ' increaseColor' : ' decreaseColor');
-				const balanceTableDataTitle = balanceChange == 0 ? '' : ` title="${(balanceChange > 0 ? '+' + balanceChange.toLocaleString() : '-' + Math.abs(balanceChange).toLocaleString())}"`;
-				const balanceTableData = `<td class="textRight${balanceTableDataColorClass}"${balanceTableDataTitle}>${balanceDisplayString}</td>`;
-
-				tableInnerHTML +=
-					`<tr>
-						<td class="tdWithInput"><button type="button" class="labelInput labelInputButton deleteAddressButton" title="Remove address ${i + 1}" onclick="removeAddressInfosIndex(${i})">X</button></td>
-						<td class="tdWithInput"><input type="text" class="labelInput" onchange="updateAddressInfosLabelFromIndex(${i}, this.value)" value="${addressInfo.label}"></td>
-						<td class="textLeft"${addressNoteTitleHTML}>${addressInfo.address}</td>
-						${balanceTableData}
-						<td class="textRight">${valuationDisplayString}</td>
-						<td style="padding: 0;">
-							<a href="https://blockchair.com/bitcoin-sv/address/${addressInfo.address}" target="_blank" title="View on block explorer">
-								<img src="https://blockchair.com/favicon.ico" alt="View">
-							</a>
-						</td>
-					</tr>`;
+				addressesTable.appendChild((() => {
+					const tr = document.createElement('tr');
+					tr.appendChild((() => {
+						// Delete address button.
+						const td = document.createElement('td');
+						td.classList.add('tdWithInput');
+						td.appendChild((() => {
+							const button = document.createElement('button');
+							button.classList.add('labelInput');
+							button.classList.add('labelInputButton');
+							button.classList.add('deleteAddressButton');
+							button.type = 'button';
+							button.title = `Remove address ${i + 1}`;
+							button.appendChild(document.createTextNode('X'));
+							button.onclick = () => { removeAddressInfosIndex(i); };
+							return button;
+						})());
+						return td;
+					})());
+					tr.appendChild((() => {
+						// Label input.
+						const td = document.createElement('td');
+						td.classList.add('tdWithInput');
+						td.appendChild((() => {
+							const input = document.createElement('input');
+							input.classList.add('labelInput');
+							input.type = 'text';
+							input.title = `Remove address ${i + 1}`;
+							input.value = addressInfo.label;
+							input.onchange = () => { updateAddressInfosLabelFromIndex(i, input.value); };
+							return input;
+						})());
+						return td;
+					})());
+					tr.appendChild((() => {
+						// Address.
+						const td = document.createElement('td');
+						td.classList.add('textLeft');
+						if (addressInfo.note) {
+							// Hover text using AddressInfo note.
+							td.title = addressInfo.note;
+						}
+						td.appendChild(document.createTextNode(addressInfo.address));
+						return td;
+					})());
+					tr.appendChild((() => {
+						// Balance.
+						const td = document.createElement('td');
+						td.classList.add('textRight');
+						if (balanceChange != 0) {
+							td.classList.add(balanceChange > 0 ? 'increaseColor' : 'decreaseColor');
+							td.title = balanceChange > 0 ? `+${balanceChange.toLocaleString()}` : `-${Math.abs(balanceChange).toLocaleString()}`;
+						}
+						td.appendChild(document.createTextNode(balanceDisplayString));
+						return td;
+					})());
+					tr.appendChild((() => {
+						// USD.
+						const td = document.createElement('td');
+						td.classList.add('textRight');
+						td.appendChild(document.createTextNode(valuationDisplayString));
+						return td;
+					})());
+					tr.appendChild((() => {
+						// Block explorer link.
+						const td = document.createElement('td');
+						td.classList.add('tdImageButton');
+						td.appendChild((() => {
+							const a = document.createElement('a');
+							a.href = `https://blockchair.com/bitcoin-sv/address/${addressInfo.address}`;
+							a.target = '_blank';
+							a.title = 'View on block explorer';
+							a.appendChild((() => {
+								const img = document.createElement('img');
+								img.src = 'https://blockchair.com/favicon.ico';
+								img.alt = 'View';
+								return img;
+							})());
+							return a;
+						})());
+						return td;
+					})());
+					return tr;
+				})());
 			}
 
 			if (addressInfos.length > 1) {
@@ -260,23 +354,40 @@
 					console.log(`Total balance change: ${totalBalanceChange}.`);
 				}
 
-				const totalBalanceTableDataColorClass = totalBalanceChange == 0 ? '' : (totalBalanceChange > 0 ? ' increaseColor' : ' decreaseColor');
-				const totalBalanceTableDataTitle = totalBalanceChange == 0 ? '' : ` title="${(totalBalanceChange > 0 ? '+' + totalBalanceChange.toLocaleString() : '-' + Math.abs(totalBalanceChange).toLocaleString())}"`;
-				const totalBalanceTableData = `<td class="textRight${totalBalanceTableDataColorClass}"${totalBalanceTableDataTitle}>${totalBalanceDisplayString}</td>`;
-
-				tableInnerHTML +=
-					`<tr>
-						<th></th>
-						<th></th>
-						<th class="textRight">Total:</th>
-						${totalBalanceTableData}
-						<td class="textRight">${totalValuationDisplayString}</td>
-						<th></th>
-					</tr>`;
+				// Last row.
+				addressesTable.appendChild((() => {
+					const tr = document.createElement('tr');
+					tr.appendChild(document.createElement('th'));
+					tr.appendChild(document.createElement('th'));
+					tr.appendChild((() => {
+						const th = document.createElement('th');
+						th.classList.add('textRight');
+						th.appendChild(document.createTextNode('Total:'));
+						return th;
+					})());
+					tr.appendChild((() => {
+						// Total balance.
+						const td = document.createElement('td');
+						td.classList.add('textRight');
+						if (totalBalanceChange != 0) {
+							td.classList.add(totalBalanceChange > 0 ? 'increaseColor' : 'decreaseColor');
+							td.title = totalBalanceChange > 0 ? `+${totalBalanceChange.toLocaleString()}` : `-${Math.abs(totalBalanceChange).toLocaleString()}`;
+						}
+						td.appendChild(document.createTextNode(totalBalanceDisplayString));
+						return td;
+					})());
+					tr.appendChild((() => {
+						// Total USD.
+						const td = document.createElement('td');
+						td.classList.add('textRight');
+						td.appendChild(document.createTextNode(totalValuationDisplayString));
+						return td;
+					})());
+					tr.appendChild(document.createElement('th'));
+					return tr;
+				})());
 			}
 
-			const addressesTable = document.createElement('table');
-			addressesTable.innerHTML = tableInnerHTML;
 			addressesTableContainer.appendChild(addressesTable);
 		}
 
@@ -479,6 +590,10 @@
 		td.textLeft {
 			padding-left: 0.6em;
 			padding-right: 0.6em;
+		}
+
+		td.tdImageButton {
+			padding: 0;
 		}
 
 		.increaseColor {
