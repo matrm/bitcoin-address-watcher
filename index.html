@@ -499,27 +499,27 @@
 			inputTarget.value = '';// Reset value so onchange() works when reloading from file again.
 		}
 
+		function addInputAddresses() {
+			const inputAddresses = document.getElementById("inputAddresses");
+			const addresses = inputAddresses.value
+				.split(',')
+				.map(a => a.replace(/[^A-Z0-9]+/ig, ''))// Remove undesirable characters.
+				.filter(a => a.length != 0);// Remove empty addresses.
+
+			if (addresses.length == 0) {
+				alert(`No valid addresses to add.`);
+				return;
+			}
+
+			inputAddresses.value = '';
+
+			// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
+			const addressInfos = getAddressInfosFromLocalStorage().concat(addresses.map(a => new AddressInfo(a)));
+
+			setupAddressInfosAndRender(addressInfos, /* scrollOnSuccess */true);
+		}
+
 		window.onload = function () {
-			document.getElementById('addAddressesButton').onclick = function () {
-				const inputAddresses = document.getElementById("inputAddresses");
-				const addresses = inputAddresses.value
-					.split(',')
-					.map(a => a.replace(/[^A-Z0-9]+/ig, ''))// Remove undesirable characters.
-					.filter(a => a.length != 0);// Remove empty addresses.
-
-				if (addresses.length == 0) {
-					alert(`No valid addresses to add.`);
-					return;
-				}
-
-				inputAddresses.value = '';
-
-				// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
-				const addressInfos = getAddressInfosFromLocalStorage().concat(addresses.map(a => new AddressInfo(a)));
-
-				setupAddressInfosAndRender(addressInfos, /* scrollOnSuccess */true);
-			};
-
 			renderUpdateRender();
 		}
 
@@ -656,7 +656,8 @@
 		<div style="text-align: center; margin-bottom: 1em;">
 			<input id="inputAddresses" class="labelInput" type="text" size="64"
 				placeholder="Input one or more addresses separated by commas" />
-			<input id="addAddressesButton" class="labelInput labelInputButton" type="button" value="Add Addresses" />
+			<input id="addAddressesButton" class="labelInput labelInputButton" type="button" value="Add Addresses"
+				onclick="addInputAddresses()" />
 		</div>
 
 		<div id="addressesTableContainer"></div>
