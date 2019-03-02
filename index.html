@@ -286,12 +286,13 @@
 			);
 		}
 
-		function removeAddressInfosUnlabeled() {
-			if (!confirm('Remove addresses without a label?')) {
+		function removeAddressInfosWithPromptLabel() {
+			const input = prompt('Enter a label to remove or leave blank to remove unlabeled.');
+			if (input == null) {
 				return;
 			}
 			render(
-				getAddressInfosFromLocalStorage().filter(address => address.label),
+				getAddressInfosFromLocalStorage().filter(address => address.label != input),
 				getPriceFromLocalStorage()
 			);
 		}
@@ -548,8 +549,8 @@
 		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove Balance of 0"
 			onclick="removeAddressInfosBalanceOfZero()" />
 
-		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove All Unlabeled"
-			onclick="removeAddressInfosUnlabeled()" />
+		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove Label"
+			onclick="removeAddressInfosWithPromptLabel()" />
 
 		<input class="labelInput labelInputButton bottomButton" type="button" value="Remove All"
 			onclick="removeAddressInfos()" />
