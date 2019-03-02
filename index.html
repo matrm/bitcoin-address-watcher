@@ -57,6 +57,7 @@
 					return addressInfos;
 				} catch (err) {
 					console.log('Unable to parse address info from localStorage:', err.message);
+					console.log(addressInfosString);
 				}
 			}
 			return [];
@@ -89,15 +90,15 @@
 				const ls = {};
 				for (var i = 0; i < localStorage.length; i++) {
 					var k = localStorage.key(i);
-					var v = localStorage.getItem(k);
+					var v = JSON.parse(localStorage.getItem(k));
 					ls[k] = v;
 				}
-				return JSON.stringify(ls);
+				return JSON.stringify(ls, null, '\t');
 			})();
 
 			// https://stackoverflow.com/a/18197341
 			const element = document.createElement('a');
-			element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(localStorageString));
+			element.setAttribute('href', 'data:text/plain;charset=utf-8,' + localStorageString);
 			element.setAttribute('download', suggestedFileName);
 			element.style.display = 'none';
 			document.body.appendChild(element);
@@ -366,7 +367,7 @@
 				try {
 					const parsedJSON = JSON.parse(text);
 					for (const [key, value] of Object.entries(parsedJSON)) {
-						localStorage.setItem(key, value);
+						localStorage.setItem(key, JSON.stringify(value));
 					}
 					console.log('Loaded from file.');
 					renderUpdateRender();
