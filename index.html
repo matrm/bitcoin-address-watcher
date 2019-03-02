@@ -182,7 +182,7 @@
 			// Start fetching price now. To be 'await'ed later.
 			const pricePromise = fetchPrice()
 				.catch(error => {
-					const errorMessage = `Error fetching price: ${error.message}`;
+					const errorMessage = `Error getting price: ${error.message}`;
 					console.log(errorMessage);
 					alert(errorMessage);
 					return getPriceFromLocalStorage();
@@ -307,7 +307,7 @@
 					}
 				})
 				.catch(error => {
-					const errorMessage = `Error fetching address balances: ${error.message}`;
+					const errorMessage = `Error getting address balances: ${error.message}`;
 					console.log(errorMessage);
 					alert(errorMessage);
 				});
