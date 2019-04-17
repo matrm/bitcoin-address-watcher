@@ -17,18 +17,7 @@
 				this.spent = spent;
 			}
 			get balanceChange() {
-				return this.balanceLastUpdate == null && this.balance == null
-					? 0
-					: (
-						this.balance
-							? (
-								// balanceLastUpdate may still be null. balance is > 0.
-								// Uses 0 when first time updating balance (when balanceLastUpdate is null).
-								// Safe to change the ': 0' to ': this.balance'.
-								this.balanceLastUpdate ? this.balance - this.balanceLastUpdate : 0
-							)
-							: 0
-					);
+				return this.balanceLastUpdate == null || this.balance == null ? 0 : this.balance - this.balanceLastUpdate;
 			}
 		}
 
