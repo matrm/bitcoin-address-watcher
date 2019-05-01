@@ -386,7 +386,7 @@
 			);
 		}
 
-		function removeAddressInfosWithPromptLabel() {
+		function removeAddressInfosMatchingPromptLabel() {
 			const input = prompt('Enter a label to remove or leave blank to remove unlabeled.');
 			if (input == null) {
 				return;
@@ -643,7 +643,7 @@
 		<div id="addressesTableContainer"></div>
 
 		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Specific Label"
-			onclick="removeAddressInfosWithPromptLabel()" />
+			onclick="removeAddressInfosMatchingPromptLabel()" />
 
 		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Valueless"
 			onclick="removeAddressInfosBalanceOfZero()" />
