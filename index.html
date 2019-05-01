@@ -116,57 +116,6 @@
 				});
 		}
 
-		async function fetchAddressBalances(addressInfos) {
-			if (addressInfos.length == 0) {
-				return;
-			}
-
-			// Convert AddressInfo array to address (string) array.
-			const addresses = addressInfos.map(addressInfo => addressInfo.address);
-
-			// Addresses can be comma-separated values.
-			const url = `https://api.bitindex.network/api/v2/addrs/balance?address=${addresses.join(',')}`;
-
-			return fetch(url)
-				.then(response => {
-					if (response.ok) {
-						return response.json();
-					}
-					throw new Error(`Request for address info rejected with status ${response.status}`);
-				})
-				.then(responseJSON => {
-					/* Example responseJSON:
-						{
-							"data": [
-								{
-									"address": "1BitcoinEaterAddressDontSendf59kuE",
-									"confirmed": 63791,
-									"unconfirmed": 0
-								},
-								{
-									"address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-									"confirmed": 1392000,
-									"unconfirmed": 144237
-								}
-							]
-						}
-					*/
-					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
-					if (!Array.isArray(data) || data.length != addressInfos.length) {
-						throw new Error('Invalid data received when fetching address balances');
-					}
-					for (let i = 0; i < data.length; i++) {
-						const confirmed = data[i].confirmed;
-						const unconfirmed = data[i].unconfirmed;
-						if (typeof confirmed == 'number' && typeof unconfirmed == 'number') {
-							addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
-							addressInfos[i].balance = confirmed + unconfirmed;
-						}
-						// addressInfos[i].balance may be a number or the default initial value.
-					}
-				});
-		}
-
 		// Requests both at the same time.
 		async function fetchAddressInfosAndPrice(addressInfos) {
 			// Start fetching price now. To be 'await'ed later.
@@ -178,7 +127,53 @@
 					return getPriceFromLocalStorage();
 				});
 
-			await fetchAddressBalances(addressInfos);
+			if (addressInfos.length) {
+				// Convert AddressInfo array to address (string) array.
+				const addresses = addressInfos.map(addressInfo => addressInfo.address);
+
+				// Addresses can be comma-separated values.
+				const url = `https://api.bitindex.network/api/v2/addrs/balance?address=${addresses.join(',')}`;
+
+				const response = await fetch(url);
+
+				if (!response.ok) {
+					throw new Error(`Request for address info rejected with status ${response.status}`);
+				}
+
+				const responseJSON = await response.json();
+				/* Example responseJSON:
+					{
+						"data": [
+							{
+								"address": "1BitcoinEaterAddressDontSendf59kuE",
+								"confirmed": 63791,
+								"unconfirmed": 0
+							},
+							{
+								"address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+								"confirmed": 1392000,
+								"unconfirmed": 144237
+							}
+						]
+					}
+				*/
+
+				const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
+
+				if (!Array.isArray(data) || data.length != addressInfos.length) {
+					throw new Error('Invalid data received when fetching address balances');
+				}
+
+				for (let i = 0; i < data.length; i++) {
+					const confirmed = data[i].confirmed;
+					const unconfirmed = data[i].unconfirmed;
+					if (typeof confirmed == 'number' && typeof unconfirmed == 'number') {
+						addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
+						addressInfos[i].balance = confirmed + unconfirmed;
+					}
+					// addressInfos[i].balance may be a number or the default initial value.
+				}
+			}
 
 			const price = await pricePromise;
 
