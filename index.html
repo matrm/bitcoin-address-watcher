@@ -486,7 +486,9 @@
 					console.log('Loaded from file.');
 					renderUpdateRender();
 				} catch (err) {
-					console.log('Unable to parse JSON backup file:', err.message);
+					const errorMessage = `Unable to parse JSON backup file: ${err.message}`;
+					console.log(errorMessage);
+					alert(errorMessage);
 				}
 			};
 			reader.onerror = function (event) {
