@@ -387,12 +387,23 @@
 		}
 
 		function removeAddressInfosMatchingPromptLabel() {
-			const input = prompt('Enter a label to remove or leave blank to remove unlabeled.');
+			const input = prompt('Remove addresses matching label or leave blank to remove unlabeled.');
 			if (input == null) {
 				return;
 			}
 			render(
 				getAddressInfosFromLocalStorage().filter(address => address.label != input),
+				getPriceFromLocalStorage()
+			);
+		}
+
+		function removeAddressInfosContainingPromptLabel() {
+			const input = prompt('Remove addresses containing label.');
+			if (!input) {
+				return;
+			}
+			render(
+				getAddressInfosFromLocalStorage().filter(address => !address.label.includes(input)),
 				getPriceFromLocalStorage()
 			);
 		}
@@ -642,8 +653,11 @@
 
 		<div id="addressesTableContainer"></div>
 
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Specific Label"
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Labels Matching"
 			onclick="removeAddressInfosMatchingPromptLabel()" />
+
+		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Labels Containing"
+			onclick="removeAddressInfosContainingPromptLabel()" />
 
 		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Valueless"
 			onclick="removeAddressInfosBalanceOfZero()" />
