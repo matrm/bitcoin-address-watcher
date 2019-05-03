@@ -127,8 +127,11 @@
 				.catch(error => {
 					const errorMessage = `Error updating price: ${error.message}`;
 					console.log(errorMessage);
-					alert(errorMessage);
-					return getPriceFromLocalStorage();
+					const priceFromLocalStorage = getPriceFromLocalStorage();
+					if (priceFromLocalStorage) {
+						alert(errorMessage);
+					}
+					return priceFromLocalStorage;
 				});
 
 			if (addressInfos.length) {
