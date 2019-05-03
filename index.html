@@ -194,18 +194,32 @@
 			const totalBalanceDisplayString = totalBalance.toLocaleString();
 			const totalValuationDisplayString = totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
-			document.getElementById('totalBalanceHeader').innerHTML = `Balance: ${totalBalanceDisplayString}`;
-			document.getElementById('totalValuationHeader').innerHTML = `${totalValuationDisplayString} USD`;
+			const headersContainer = document.getElementById('headersContainer');
+			while (headersContainer.firstChild) {
+				// Remove current headers. https://stackoverflow.com/a/3955238
+				headersContainer.removeChild(headersContainer.firstChild);
+			}
 
 			const addressesTableContainer = document.getElementById('addressesTableContainer');
-
 			while (addressesTableContainer.firstChild) {
 				// Remove current table. https://stackoverflow.com/a/3955238
 				addressesTableContainer.removeChild(addressesTableContainer.firstChild);
 			}
 
+			const totalBalanceHeader = document.createElement('h1');
+			totalBalanceHeader.id = 'totalBalanceHeader';
+			totalBalanceHeader.appendChild(document.createTextNode(`Balance: ${totalBalanceDisplayString}`));
+			headersContainer.appendChild(totalBalanceHeader);
+
 			if (addressInfos.length == 0) {
 				return;
+			}
+
+			if (price) {
+				const totalValuationHeader = document.createElement('h1');
+				totalValuationHeader.id = 'totalValuationHeader';
+				totalValuationHeader.appendChild(document.createTextNode(`${totalValuationDisplayString} USD`));
+				headersContainer.appendChild(totalValuationHeader);
 			}
 
 			const addressesTable = document.createElement('table');
@@ -230,11 +244,13 @@
 					th.appendChild(document.createTextNode('Balance'));
 					return th;
 				})());
-				tr.appendChild((() => {
-					const th = document.createElement('th');
-					th.appendChild(document.createTextNode('USD'));
-					return th;
-				})());
+				if (price) {
+					tr.appendChild((() => {
+						const th = document.createElement('th');
+						th.appendChild(document.createTextNode('USD'));
+						return th;
+					})());
+				}
 				tr.appendChild(document.createElement('th'));
 				return tr;
 			})());
@@ -308,13 +324,15 @@
 						td.appendChild(document.createTextNode(balanceDisplayString));
 						return td;
 					})());
-					tr.appendChild((() => {
-						// USD.
-						const td = document.createElement('td');
-						td.classList.add('textRight');
-						td.appendChild(document.createTextNode(valuationDisplayString));
-						return td;
-					})());
+					if (price) {
+						tr.appendChild((() => {
+							// USD.
+							const td = document.createElement('td');
+							td.classList.add('textRight');
+							td.appendChild(document.createTextNode(valuationDisplayString));
+							return td;
+						})());
+					}
 					tr.appendChild((() => {
 						// Block explorer link.
 						const td = document.createElement('td');
@@ -365,13 +383,15 @@
 						td.appendChild(document.createTextNode(totalBalanceDisplayString));
 						return td;
 					})());
-					tr.appendChild((() => {
-						// Total USD.
-						const td = document.createElement('td');
-						td.classList.add('textRight');
-						td.appendChild(document.createTextNode(totalValuationDisplayString));
-						return td;
-					})());
+					if (price) {
+						tr.appendChild((() => {
+							// Total USD.
+							const td = document.createElement('td');
+							td.classList.add('textRight');
+							td.appendChild(document.createTextNode(totalValuationDisplayString));
+							return td;
+						})());
+					}
 					tr.appendChild(document.createElement('th'));
 					return tr;
 				})());
@@ -650,8 +670,7 @@
 
 	<div class="container">
 
-		<h1 id="totalBalanceHeader"></h1>
-		<h1 id="totalValuationHeader"></h1>
+		<div id="headersContainer"></div>
 
 		<input id="inputAddresses" class="labelInput" type="text" size="64"
 			placeholder="Input one or more addresses separated by commas" />
