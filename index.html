@@ -414,7 +414,7 @@
 		}
 
 		function removeAddressInfosMatchingPromptLabel() {
-			const input = prompt('Remove addresses matching label or leave blank to remove unlabeled.');
+			const input = prompt('Remove addresses with label matching text (or leave blank to remove all unlabeled addresses):');
 			if (input == null) {
 				return;
 			}
@@ -425,7 +425,7 @@
 		}
 
 		function removeAddressInfosContainingPromptLabel() {
-			const input = prompt('Remove addresses containing label.');
+			const input = prompt('Remove addresses with label containing text:');
 			if (!input) {
 				return;
 			}
