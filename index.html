@@ -209,6 +209,12 @@
 				addressesTableContainer.removeChild(addressesTableContainer.firstChild);
 			}
 
+			const removeAddressesButtonsContainer = document.getElementById('removeAddressesButtonsContainer');
+			while (removeAddressesButtonsContainer.firstChild) {
+				// Remove current remove addresses buttons. https://stackoverflow.com/a/3955238
+				removeAddressesButtonsContainer.removeChild(removeAddressesButtonsContainer.firstChild);
+			}
+
 			const totalBalanceHeader = document.createElement('h1');
 			totalBalanceHeader.id = 'totalBalanceHeader';
 			totalBalanceHeader.appendChild(document.createTextNode(`Balance: ${totalBalanceDisplayString}`));
@@ -398,6 +404,27 @@
 					tr.appendChild(document.createElement('th'));
 					return tr;
 				})());
+
+				// Remove multiple address buttons.
+				const createRemoveAddressesButton = function (onclick, value, title) {
+					console.assert(onclick instanceof Function);
+					console.assert(value);
+					const button = document.createElement('input');
+					button.type = 'button';
+					button.classList.add('labelInput');
+					button.classList.add('labelInputButton');
+					button.classList.add('standardMargin');
+					button.onclick = onclick;
+					button.value = value;
+					if (title) {
+						button.title = title;
+					}
+					return button;
+				};
+				removeAddressesButtonsContainer.appendChild(createRemoveAddressesButton(removeAddressInfosContainingPromptLabel, 'Remove Labels Containing'));
+				removeAddressesButtonsContainer.appendChild(createRemoveAddressesButton(removeAddressInfosMatchingPromptLabel, 'Remove Labels Matching'));
+				removeAddressesButtonsContainer.appendChild(createRemoveAddressesButton(removeAddressInfosBalanceOfZero, 'Remove Valueless'));
+				removeAddressesButtonsContainer.appendChild(createRemoveAddressesButton(removeAddressInfos, 'Remove All'));
 			}
 
 			addressesTableContainer.appendChild(addressesTable);
@@ -681,19 +708,7 @@
 
 		<div id="addressesTableContainer"></div>
 
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Labels Containing"
-			onclick="removeAddressInfosContainingPromptLabel()" />
-
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Labels Matching"
-			onclick="removeAddressInfosMatchingPromptLabel()" />
-
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove Valueless"
-			onclick="removeAddressInfosBalanceOfZero()" />
-
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Remove All"
-			onclick="removeAddressInfos()" />
-
-		<br>
+		<div id="removeAddressesButtonsContainer"></div>
 
 		<label class="labelInput labelInputButton standardMargin">
 			<input style="display: none;" type="file" accept=".json"
