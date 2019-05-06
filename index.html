@@ -690,7 +690,7 @@
 		}
 
 		.standardMargin {
-			margin: 0.5em 0.16em 0;
+			margin: 0.5em 0.25em 0;
 		}
 	</style>
 
@@ -711,12 +711,9 @@
 		<div id="removeAddressesButtonsContainer"></div>
 
 		<label class="labelInput labelInputButton standardMargin">
-			<input style="display: none;" type="file" accept=".json"
-				onchange="loadFromFileAndRender(event.target)" />
+			<input style="display: none;" type="file" accept=".json" onchange="loadFromFileAndRender(event.target)" />
 			Import
-		</label>
-
-		<input class="labelInput labelInputButton standardMargin" type="button" value="Export"
+		</label><input class="labelInput labelInputButton standardMargin" type="button" value="Export"
 			onclick="backupToFile()" />
 
 		<br>
