@@ -87,13 +87,9 @@
 				return JSON.stringify(ls, null, '\t');
 			})();
 
-			// https://developer.mozilla.org/en-US/docs/Web/API/Blob#Blob_constructor_example_usage
-			const blob = new Blob([localStorageString], { type: 'application/json' });
-
-			// https://stackoverflow.com/a/18197341 <-- Doesn't work when file contains '#' character.
-			// https://stackoverflow.com/a/29339233 <-- Using Blob.
+			// https://stackoverflow.com/a/18197341
 			const element = document.createElement('a');
-			element.href = URL.createObjectURL(blob);
+			element.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(localStorageString);// encodeURIComponent allows file to contain '#' characters.
 			element.download = suggestedFileName;
 			element.style.display = 'none';
 			document.body.appendChild(element);
