@@ -100,22 +100,23 @@
 		async function fetchPrice() {
 			const url = 'https://api.blockchair.com/bitcoin-sv/stats';
 
-			return fetch(url)
-				.then(response => {
-					if (response.ok) {
-						return response.json();
-					}
-					throw new Error(`Request for price rejected with status ${response.status}`);
-				})
-				.then(responseJSON => {
-					const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
-					const market_cap_usd = data.market_cap_usd;
-					const circulation = data.circulation;
-					if (typeof market_cap_usd != 'number' || typeof circulation != 'number' || circulation < 1763916464692325) {
-						throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
-					}
-					return market_cap_usd / circulation;
-				});
+			const response = await fetch(url);
+
+			if (!response.ok) {
+				throw new Error(`Request for price rejected with status ${response.status}`);
+			}
+
+			const responseJSON = await response.json();
+
+			const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
+			const market_cap_usd = data.market_cap_usd;
+			const circulation = data.circulation;
+
+			if (typeof market_cap_usd != 'number' || typeof circulation != 'number' || circulation < 1763916464692325) {
+				throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
+			}
+
+			return market_cap_usd / circulation;
 		}
 
 		// Requests both at the same time.
