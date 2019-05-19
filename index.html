@@ -26,7 +26,7 @@
 		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
 		const PRICE_LOCAL_STORAGE_KEY = 'price';
 
-		let confirmDeletingAddressAfterTime = new Date().getTime();
+		let confirmDeletingAddressAfterTime = Date.now();
 
 		function setAddressInfosInLocalStorage(addressInfos) {
 			console.assert(Array.isArray(addressInfos));
@@ -470,7 +470,7 @@
 
 		function removeAddressInfosIndex(index) {
 			if (
-				new Date().getTime() > confirmDeletingAddressAfterTime &&
+				Date.now() > confirmDeletingAddressAfterTime &&
 				!confirm(`Remove address ${index + 1}?`)
 			) {
 				// Prevent accidentally removing an address.
@@ -480,7 +480,7 @@
 			const price = getPriceFromLocalStorage();
 			addressInfos.splice(index, 1);
 			render(addressInfos, price);
-			confirmDeletingAddressAfterTime = new Date().getTime() + 3000;
+			confirmDeletingAddressAfterTime = Date.now() + 3000;
 		}
 
 		function updateAddressInfosLabelFromIndex(index, label) {
