@@ -28,29 +28,61 @@
 
 		let confirmDeletingAddressAfterTime = Date.now();
 
+		// Prevent collisions with sites on the same domain.
+		const localStorageNamespaced = {
+			_localStorageKey: 'matrm-bitcoin-address-watcher',
+			storage: null,
+			_getStorageObject() {
+				if (this.storage) {
+					return this.storage;
+				}
+				const storageString = localStorage.getItem(this._localStorageKey) || '{}';
+				this.storage = {};
+				try {
+					this.storage = JSON.parse(storageString);
+				} catch (err) {
+					console.log('Unable to parse localStorage:', err.message);
+					console.log(storageString);
+					console.log('Resetting localStorage.');
+					localStorage.clear();
+				}
+				return this.storage;
+			},
+			setStorageObject(storage) {
+				localStorage.setItem(this._localStorageKey, JSON.stringify(storage));
+				this.storage = storage;
+			},
+			setItem(k, v) {
+				const storage = this._getStorageObject();
+				storage[k] = v;
+				this.setStorageObject(storage);
+			},
+			getItem(k) {
+				const storage = this._getStorageObject();
+				const item = storage[k];
+				if (item == undefined) {
+					return null;
+				}
+				return item;
+			},
+			toFormattedString() {
+				return JSON.stringify(this._getStorageObject(), null, '\t');
+			}
+		};
+
 		function setAddressInfosInLocalStorage(addressInfos) {
 			console.assert(Array.isArray(addressInfos));
-			localStorage.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, JSON.stringify(addressInfos));
+			localStorageNamespaced.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, addressInfos);
 		}
 
 		function getAddressInfosFromLocalStorage() {
-			const addressInfosString = localStorage.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY);
-			if (addressInfosString) {
-				try {
-					const parsedJSON = JSON.parse(addressInfosString);
-					const addressInfos = [];
-					for (let addressInfoData of parsedJSON) {
-						// Convert to new AddressInfo because the serialized json has no functions.
-						const addressInfo = new AddressInfo();
-						Object.assign(addressInfo, addressInfoData);
-						addressInfos.push(addressInfo);
-					}
-					return addressInfos;
-				} catch (err) {
-					console.log('Unable to parse address info from localStorage:', err.message);
-					console.log(addressInfosString);
-				}
+			const addressInfosDeserialized = localStorageNamespaced.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY);
+			if (Array.isArray(addressInfosDeserialized)) {
+				// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
+				return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
 			}
+			console.log('Unable to parse address info from localStorage:');
+			console.log(addressInfosDeserialized);
 			return [];
 		}
 
@@ -59,34 +91,16 @@
 				return;
 			}
 			console.assert(typeof price == 'number');
-			localStorage.setItem(PRICE_LOCAL_STORAGE_KEY, price.toString());
+			localStorageNamespaced.setItem(PRICE_LOCAL_STORAGE_KEY, price);
 		}
 
 		function getPriceFromLocalStorage() {
-			const priceString = localStorage.getItem(PRICE_LOCAL_STORAGE_KEY);
-			if (priceString) {
-				try {
-					return parseFloat(priceString);
-				} catch (err) {
-					console.log('Unable to parse price from localStorage:', err.message);
-				}
-			}
-			return null;
+			return parseFloat(localStorageNamespaced.getItem(PRICE_LOCAL_STORAGE_KEY)) || null;
 		}
 
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
-
-			localStorageString = (() => {
-				const ls = {};
-				for (var i = 0; i < localStorage.length; i++) {
-					var k = localStorage.key(i);
-					var v = JSON.parse(localStorage.getItem(k));
-					ls[k] = v;
-				}
-				return JSON.stringify(ls, null, '\t');
-			})();
-
+			const localStorageString = localStorageNamespaced.toFormattedString();
 			// https://stackoverflow.com/a/18197341
 			const element = document.createElement('a');
 			element.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(localStorageString);// encodeURIComponent allows file to contain '#' characters.
@@ -528,10 +542,7 @@
 			reader.onload = function () {
 				const text = reader.result;
 				try {
-					const parsedJSON = JSON.parse(text);
-					for (const [key, value] of Object.entries(parsedJSON)) {
-						localStorage.setItem(key, JSON.stringify(value));
-					}
+					localStorageNamespaced.setStorageObject(JSON.parse(text));
 					console.log('Loaded from file.');
 					renderUpdateRender();
 				} catch (err) {
