@@ -31,26 +31,26 @@
 		// Prevent collisions with sites on the same domain.
 		const localStorageNamespaced = {
 			_localStorageKey: 'matrm-bitcoin-address-watcher',
-			storage: null,
+			_storage: null,
 			_getStorageObject() {
-				if (this.storage) {
-					return this.storage;
+				if (this._storage) {
+					return this._storage;
 				}
 				const storageString = localStorage.getItem(this._localStorageKey) || '{}';
-				this.storage = {};
+				this._storage = {};
 				try {
-					this.storage = JSON.parse(storageString);
+					this._storage = JSON.parse(storageString);
 				} catch (err) {
 					console.log('Unable to parse localStorage:', err.message);
 					console.log(storageString);
 					console.log('Resetting localStorage.');
 					localStorage.clear();
 				}
-				return this.storage;
+				return this._storage;
 			},
 			setStorageObject(storage) {
 				localStorage.setItem(this._localStorageKey, JSON.stringify(storage));
-				this.storage = storage;
+				this._storage = storage;
 			},
 			setItem(k, v) {
 				const storage = this._getStorageObject();
