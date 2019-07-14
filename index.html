@@ -109,7 +109,21 @@
 			document.body.removeChild(element);
 		}
 
-		async function fetchPrice() {
+		async function fetchPriceFromPoloniex() {
+			const url = 'https://poloniex.com/public?command=returnTicker';
+
+			const response = await fetch(url);
+
+			if (!response.ok) {
+				throw new Error(`Request for price rejected with status ${response.status}`);
+			}
+
+			const responseJSON = await response.json();
+
+			return parseFloat(responseJSON.USDC_BCHSV.last) / 100000000;
+		}
+
+		async function fetchPriceFromBlockchair() {
 			const url = 'https://api.blockchair.com/bitcoin-sv/stats';
 
 			const response = await fetch(url);
@@ -131,16 +145,40 @@
 			return market_cap_usd / circulation;
 		}
 
+		async function fetchPrice() {
+			const errorMessages = [];
+
+			const priceFromPoloniexPromise = fetchPriceFromPoloniex()
+				.catch(error => {
+					console.log(error);
+					errorMessages.push(`Error updating price from Poloniex: ${error.message}`);
+					return null;
+				});
+			const priceFromBlockchairPromise = fetchPriceFromBlockchair()
+				.catch(error => {
+					console.log(error);
+					errorMessages.push(`Error updating price from Blockchair: ${error.message}`);
+					return null;
+				});
+
+			const price = await priceFromPoloniexPromise || await priceFromBlockchairPromise;
+
+			if (!price) {
+				throw new Error(`Error updating price from all sources:${errorMessages.map(errorMessage => `\n${errorMessage}`)}`);
+			}
+
+			return price;
+		}
+
 		// Requests both at the same time.
 		async function fetchAddressInfosAndPrice(addressInfos) {
 			// Start fetching price now. To be 'await'ed later.
 			const pricePromise = fetchPrice()
 				.catch(error => {
-					const errorMessage = `Error updating price: ${error.message}`;
-					console.log(errorMessage);
+					console.log(error.message);
 					const priceFromLocalStorage = getPriceFromLocalStorage();
 					if (priceFromLocalStorage) {
-						alert(errorMessage);
+						alert(error.message);
 					}
 					return priceFromLocalStorage;
 				});
