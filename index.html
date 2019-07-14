@@ -81,8 +81,6 @@
 				// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
 				return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
 			}
-			console.log('Unable to parse address info from localStorage:');
-			console.log(addressInfosDeserialized);
 			return [];
 		}
 
