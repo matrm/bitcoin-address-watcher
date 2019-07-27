@@ -148,26 +148,21 @@
 		async function fetchPrice() {
 			const errorMessages = [];
 
-			const priceFromPoloniexPromise = fetchPriceFromPoloniex()
-				.catch(error => {
-					console.log(error);
-					errorMessages.push(`Error updating price from Poloniex: ${error.message}`);
-					return null;
-				});
-			const priceFromBlockchairPromise = fetchPriceFromBlockchair()
-				.catch(error => {
-					console.log(error);
-					errorMessages.push(`Error updating price from Blockchair: ${error.message}`);
-					return null;
-				});
-
-			const price = await priceFromPoloniexPromise || await priceFromBlockchairPromise;
-
-			if (!price) {
-				throw new Error(`Error updating price from all sources:${errorMessages.map(errorMessage => `\n${errorMessage}`)}`);
+			try {
+				return await fetchPriceFromPoloniex();
+			} catch (err) {
+				console.log(err);
+				errorMessages.push(`Error updating price from Poloniex: ${err.message}`);
 			}
 
-			return price;
+			try {
+				return await fetchPriceFromBlockchair();
+			} catch (err) {
+				console.log(err);
+				errorMessages.push(`Error updating price from Blockchair: ${err.message}`);
+			}
+
+			throw new Error(`Error updating price from all sources:${errorMessages.map(errorMessage => `\n${errorMessage}`)}`);
 		}
 
 		// Requests both at the same time.
