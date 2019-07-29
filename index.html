@@ -313,6 +313,7 @@
 				const balanceLastUpdate = addressInfo.balanceLastUpdate;
 				const balance = addressInfo.balance;
 				const balanceChange = addressInfo.balanceChange;
+				const spent = addressInfo.spent;
 				const valuation = balance == null || price == null ? null : balance * price;
 				const balanceDisplayString = balance == null ? '' : balance.toLocaleString();
 				const valuationDisplayString = valuation == null ? '' : valuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -370,9 +371,23 @@
 						// Balance.
 						const td = document.createElement('td');
 						td.classList.add('textRight');
-						if (balanceChange != 0) {
+						if (balanceChange) {
 							td.classList.add(balanceChange > 0 ? 'increaseColor' : 'decreaseColor');
 							td.title = balanceChange > 0 ? `+${balanceChange.toLocaleString()}` : `-${Math.abs(balanceChange).toLocaleString()}`;
+						}
+						if (spent) {
+							if (!balanceChange) {
+								// Make sure balance change color has priority independent of CSS ordering.
+								td.classList.add('spentColor');
+							}
+							if (td.title) {
+								td.title += '\n';
+							}
+							if (balance) {
+								td.title += 'Warning: This address has been re-used after being involved in a spent transaction.';
+							} else {
+								td.title += 'This address has been involved in a spent transaction.';
+							}
 						}
 						td.appendChild(document.createTextNode(balanceDisplayString));
 						return td;
@@ -695,6 +710,10 @@
 
 		button.deleteAddressButton {
 			color: #d00;
+		}
+
+		.spentColor {
+			color: #dd0;
 		}
 
 		.increaseColor {
