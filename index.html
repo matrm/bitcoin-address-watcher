@@ -23,11 +23,6 @@
 			}
 		}
 
-		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
-		const PRICE_LOCAL_STORAGE_KEY = 'price';
-
-		let confirmDeletingAddressAfterTime = Date.now();
-
 		// Prevent collisions with sites on the same domain.
 		const localStorageNamespaced = {
 			_localStorageKey: 'matrm-bitcoin-address-watcher',
@@ -70,6 +65,9 @@
 			}
 		};
 
+		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
+		const PRICE_LOCAL_STORAGE_KEY = 'price';
+
 		function setAddressInfosInLocalStorage(addressInfos) {
 			console.assert(Array.isArray(addressInfos));
 			localStorageNamespaced.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, addressInfos);
@@ -95,6 +93,10 @@
 		function getPriceFromLocalStorage() {
 			return parseFloat(localStorageNamespaced.getItem(PRICE_LOCAL_STORAGE_KEY)) || null;
 		}
+
+		let addressInfosUpdated = getAddressInfosFromLocalStorage().length == 0;// Allowing this to be true now makes the first time render not be transparent.
+		let priceUpdated = false;
+		let confirmDeletingAddressAfterTime = Date.now();
 
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
@@ -245,10 +247,12 @@
 		// Requests both at the same time.
 		async function fetchAddressInfosAndPrice(addressInfos) {
 			// Start fetching price now. To be 'await'ed later.
-			let priceUpdated = true;
 			const pricePromise = fetchPrice()
+				.then(price => {
+					priceUpdated = true;
+					return price;
+				})
 				.catch(error => {
-					priceUpdated = false;
 					console.log(error.message);
 					const priceFromLocalStorage = getPriceFromLocalStorage();
 					if (priceFromLocalStorage) {
@@ -260,13 +264,14 @@
 			if (addressInfos.length) {
 				await updateAddressInfos(addressInfos);
 			}
+			addressInfosUpdated = true;
 
 			const price = await pricePromise;
 
-			return { addressInfos, price, priceUpdated };
+			return { addressInfos, price };
 		}
 
-		function render(addressInfos, price, addressInfosUpdated = true, priceUpdated = true) {
+		function render(addressInfos, price) {
 			setAddressInfosInLocalStorage(addressInfos);
 			setPriceInLocalStorage(price);
 
@@ -606,7 +611,7 @@
 		function setupAddressInfosAndRender(addressInfos, scrollOnSuccess = false) {
 			fetchAddressInfosAndPrice(addressInfos)
 				.then(addressInfosAndPrice => {
-					render(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price, /* addressInfosUpdated */true, addressInfosAndPrice.priceUpdated);
+					render(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
 					if (scrollOnSuccess) {
 						window.scrollTo(0, document.body.scrollHeight);
 					}
@@ -627,7 +632,7 @@
 			}
 
 			// Render before fetching any external data.
-			render(addressInfos, getPriceFromLocalStorage(), /* addressInfosUpdated */false, /* priceUpdated */false);
+			render(addressInfos, getPriceFromLocalStorage());
 
 			if (addressInfos.length) {
 				setupAddressInfosAndRender(addressInfos);
