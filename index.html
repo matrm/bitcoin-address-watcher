@@ -65,6 +65,14 @@
 			}
 		};
 
+		function assignAddressInfosDeserializedToNewAddressInfo(addressInfosDeserialized) {
+			if (Array.isArray(addressInfosDeserialized)) {
+				// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
+				return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
+			}
+			return [];
+		}
+
 		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
 		const PRICE_LOCAL_STORAGE_KEY = 'price';
 
@@ -85,14 +93,7 @@
 		}();
 
 		const addressInfosManager = new function () {
-			this._addressInfos = (() => {
-				const addressInfosDeserialized = localStorageNamespaced.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY);
-				if (Array.isArray(addressInfosDeserialized)) {
-					// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
-					return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
-				}
-				return [];
-			})();
+			this._addressInfos = assignAddressInfosDeserializedToNewAddressInfo(localStorageNamespaced.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY));
 			this.updated = this._addressInfos.length == 0;// Allowing this to be true now makes the first time render not be transparent.
 			this.setAddressInfos = addressInfos => {
 				console.assert(Array.isArray(addressInfos));
@@ -648,7 +649,10 @@
 			reader.onload = function () {
 				const text = reader.result;
 				try {
+					const parsedText = JSON.parse(text);// parsedText.addressInfos will not have instanceof AddressInfo.
+					parsedText.addressInfos = assignAddressInfosDeserializedToNewAddressInfo(parsedText.addressInfos);
 					localStorageNamespaced.setStorageObject(JSON.parse(text));
+					addressInfosManager.setAddressInfos(parsedText.addressInfos);
 					console.log('Loaded from file.');
 					renderUpdateRender();
 				} catch (err) {
