@@ -68,35 +68,42 @@
 		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
 		const PRICE_LOCAL_STORAGE_KEY = 'price';
 
-		function setAddressInfosInLocalStorage(addressInfos) {
-			console.assert(Array.isArray(addressInfos));
-			localStorageNamespaced.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, addressInfos);
-		}
-
-		function getAddressInfosFromLocalStorage() {
-			const addressInfosDeserialized = localStorageNamespaced.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY);
-			if (Array.isArray(addressInfosDeserialized)) {
-				// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
-				return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
-			}
-			return [];
-		}
-
-		function setPriceInLocalStorage(price) {
-			if (price == null) {
-				return;
-			}
-			console.assert(typeof price == 'number');
-			localStorageNamespaced.setItem(PRICE_LOCAL_STORAGE_KEY, price);
-		}
-
-		function getPriceFromLocalStorage() {
-			return parseFloat(localStorageNamespaced.getItem(PRICE_LOCAL_STORAGE_KEY)) || null;
-		}
-
-		let addressInfosUpdated = getAddressInfosFromLocalStorage().length == 0;// Allowing this to be true now makes the first time render not be transparent.
-		let priceUpdated = false;
 		let confirmDeletingAddressAfterTime = Date.now();
+
+		const priceManager = new function () {
+			this._price = parseFloat(localStorageNamespaced.getItem(PRICE_LOCAL_STORAGE_KEY)) || null;
+			this.updated = false;
+			this.setPrice = price => {
+				console.assert(typeof price == 'number');
+				localStorageNamespaced.setItem(PRICE_LOCAL_STORAGE_KEY, price);
+				this._price = price;
+				this.updated = true;
+			};
+			this.getPrice = () => {
+				return this._price;
+			};
+		}();
+
+		const addressInfosManager = new function () {
+			this._addressInfos = (() => {
+				const addressInfosDeserialized = localStorageNamespaced.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY);
+				if (Array.isArray(addressInfosDeserialized)) {
+					// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
+					return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
+				}
+				return [];
+			})();
+			this.updated = this._addressInfos.length == 0;// Allowing this to be true now makes the first time render not be transparent.
+			this.setAddressInfos = addressInfos => {
+				console.assert(Array.isArray(addressInfos));
+				localStorageNamespaced.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, addressInfos);
+				this._addressInfos = addressInfos;
+				this.updated = true;
+			};
+			this.getAddressInfos = () => {
+				return this._addressInfos;
+			};
+		}();
 
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
@@ -218,7 +225,9 @@
 		}
 
 		async function updateAddressInfos(addressInfos) {
-			console.assert(addressInfos.length);
+			if (!addressInfos.length) {
+				return;
+			}
 
 			const errorMessages = [];
 
@@ -245,35 +254,38 @@
 		}
 
 		// Requests both at the same time.
-		async function fetchAddressInfosAndPrice(addressInfos) {
+		async function updateAddressInfosAndPrice(addressInfos) {
 			// Start fetching price now. To be 'await'ed later.
 			const pricePromise = fetchPrice()
 				.then(price => {
-					priceUpdated = true;
-					return price;
+					priceManager.setPrice(price);
 				})
 				.catch(error => {
+					priceManager.updated = false;
 					console.log(error.message);
-					const priceFromLocalStorage = getPriceFromLocalStorage();
-					if (priceFromLocalStorage) {
+					if (priceManager.getPrice()) {
+						// An alert is only necessary if the price API worked previously.
 						alert(error.message);
 					}
-					return priceFromLocalStorage;
 				});
 
-			if (addressInfos.length) {
+			try {
 				await updateAddressInfos(addressInfos);
+				addressInfosManager.setAddressInfos(addressInfos);
+			} catch (err) {
+				addressInfosManager.updated = addressInfosManager.getAddressInfos().length == 0;// Allowing this to be true now makes the first time updating not be transparent when it fails.
+				console.log(err.message);
+				alert(err.message);
 			}
-			addressInfosUpdated = true;
 
-			const price = await pricePromise;
-
-			return { addressInfos, price };
+			await pricePromise;
 		}
 
-		function render(addressInfos, price) {
-			setAddressInfosInLocalStorage(addressInfos);
-			setPriceInLocalStorage(price);
+		function render() {
+			const addressInfos = addressInfosManager.getAddressInfos();
+			const price = priceManager.getPrice();
+			const addressInfosUpdated = addressInfosManager.updated;
+			const priceUpdated = priceManager.updated;
 
 			const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
 			const totalBalanceChange = addressInfos.reduce((t, address) => t + address.balanceChange, 0);
@@ -551,10 +563,8 @@
 			if (!confirm('Remove addresses with a balance of 0?')) {
 				return;
 			}
-			render(
-				getAddressInfosFromLocalStorage().filter(address => address.balance),
-				getPriceFromLocalStorage()
-			);
+			addressInfosManager.setAddressInfos(addressInfosManager.getAddressInfos().filter(address => address.balance));
+			render();
 		}
 
 		function removeAddressInfosMatchingPromptLabel() {
@@ -562,10 +572,8 @@
 			if (input == null) {
 				return;
 			}
-			render(
-				getAddressInfosFromLocalStorage().filter(address => address.label != input),
-				getPriceFromLocalStorage()
-			);
+			addressInfosManager.setAddressInfos(addressInfosManager.getAddressInfos().filter(address => address.label != input));
+			render();
 		}
 
 		function removeAddressInfosContainingPromptLabel() {
@@ -573,17 +581,16 @@
 			if (!input) {
 				return;
 			}
-			render(
-				getAddressInfosFromLocalStorage().filter(address => !address.label.includes(input)),
-				getPriceFromLocalStorage()
-			);
+			addressInfosManager.setAddressInfos(addressInfosManager.getAddressInfos().filter(address => !address.label.includes(input)));
+			render();
 		}
 
 		function removeAddressInfos() {
 			if (!confirm('Remove all addresses?')) {
 				return;
 			}
-			render(/* addressInfos */[], getPriceFromLocalStorage());
+			addressInfosManager.setAddressInfos([]);
+			render();
 		}
 
 		function removeAddressInfosIndex(index) {
@@ -594,36 +601,32 @@
 				// Prevent accidentally removing an address.
 				return;
 			}
-			const addressInfos = getAddressInfosFromLocalStorage();
-			const price = getPriceFromLocalStorage();
+			const addressInfos = addressInfosManager.getAddressInfos();
 			addressInfos.splice(index, 1);
-			render(addressInfos, price);
+			addressInfosManager.setAddressInfos(addressInfos);
+			render();
 			confirmDeletingAddressAfterTime = Date.now() + 3000;
 		}
 
 		function updateAddressInfosLabelFromIndex(index, label) {
-			const addressInfos = getAddressInfosFromLocalStorage();
+			const addressInfos = addressInfosManager.getAddressInfos();
 			addressInfos[index].label = label;
-			setAddressInfosInLocalStorage(addressInfos);
+			addressInfosManager.setAddressInfos(addressInfos);
 		}
 
 		// Download balance for each new AddressInfo, update price, and then update UI.
-		function setupAddressInfosAndRender(addressInfos, scrollOnSuccess = false) {
-			fetchAddressInfosAndPrice(addressInfos)
-				.then(addressInfosAndPrice => {
-					render(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
-					if (scrollOnSuccess) {
-						window.scrollTo(0, document.body.scrollHeight);
-					}
-				})
-				.catch(error => {
-					console.log(error.message);
-					alert(error.message);
-				});
+		async function updateRender(addressInfos, scrollOnSuccess = false) {
+			await updateAddressInfosAndPrice(addressInfos);
+			if (addressInfosManager.updated || priceManager.updated) {
+				render();
+				if (scrollOnSuccess && addressInfosManager.updated) {
+					window.scrollTo(0, document.body.scrollHeight);
+				}
+			}
 		}
 
 		function renderUpdateRender() {
-			const addressInfos = getAddressInfosFromLocalStorage();
+			const addressInfos = addressInfosManager.getAddressInfos();
 
 			// Unset all the balanceLastUpdate because rendering balance changes the first time is pointless.
 			const defaultBalanceLastUpdate = new AddressInfo().balanceLastUpdate;
@@ -632,10 +635,10 @@
 			}
 
 			// Render before fetching any external data.
-			render(addressInfos, getPriceFromLocalStorage());
+			render();
 
 			if (addressInfos.length) {
-				setupAddressInfosAndRender(addressInfos);
+				updateRender(addressInfos);
 			}
 		}
 
@@ -679,9 +682,9 @@
 			inputAddresses.value = '';
 
 			// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
-			const addressInfos = getAddressInfosFromLocalStorage().concat(addresses.map(a => new AddressInfo(a)));
+			const addressInfos = addressInfosManager.getAddressInfos().concat(addresses.map(a => new AddressInfo(a)));
 
-			setupAddressInfosAndRender(addressInfos, /* scrollOnSuccess */true);
+			updateRender(addressInfos, /* scrollOnSuccess */true);
 		}
 
 		window.onload = function () {
