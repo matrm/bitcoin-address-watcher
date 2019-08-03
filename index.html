@@ -245,8 +245,10 @@
 		// Requests both at the same time.
 		async function fetchAddressInfosAndPrice(addressInfos) {
 			// Start fetching price now. To be 'await'ed later.
+			let priceUpdated = true;
 			const pricePromise = fetchPrice()
 				.catch(error => {
+					priceUpdated = false;
 					console.log(error.message);
 					const priceFromLocalStorage = getPriceFromLocalStorage();
 					if (priceFromLocalStorage) {
@@ -261,10 +263,10 @@
 
 			const price = await pricePromise;
 
-			return { addressInfos, price };
+			return { addressInfos, price, priceUpdated };
 		}
 
-		function render(addressInfos, price) {
+		function render(addressInfos, price, addressInfosUpdated = true, priceUpdated = true) {
 			setAddressInfosInLocalStorage(addressInfos);
 			setPriceInLocalStorage(price);
 
@@ -293,6 +295,9 @@
 			}
 
 			const totalBalanceHeader = document.createElement('h1');
+			if (!addressInfosUpdated) {
+				totalBalanceHeader.classList.add('transparent');
+			}
 			totalBalanceHeader.id = 'totalBalanceHeader';
 			totalBalanceHeader.appendChild(document.createTextNode(`Balance: ${totalBalanceDisplayString}`));
 			headersContainer.appendChild(totalBalanceHeader);
@@ -303,6 +308,9 @@
 
 			if (price) {
 				const totalValuationHeader = document.createElement('h1');
+				if (!priceUpdated) {
+					totalValuationHeader.classList.add('transparent');
+				}
 				totalValuationHeader.id = 'totalValuationHeader';
 				totalValuationHeader.appendChild(document.createTextNode(`${totalValuationDisplayString} USD`));
 				headersContainer.appendChild(totalValuationHeader);
@@ -404,6 +412,9 @@
 						// Balance.
 						const td = document.createElement('td');
 						td.classList.add('textRight');
+						if (!addressInfosUpdated) {
+							td.classList.add('transparent');
+						}
 						if (balanceChange) {
 							td.classList.add(balanceChange > 0 ? 'increaseColor' : 'decreaseColor');
 							td.title = balanceChange > 0 ? `+${balanceChange.toLocaleString()}` : `-${Math.abs(balanceChange).toLocaleString()}`;
@@ -430,6 +441,9 @@
 							// USD.
 							const td = document.createElement('td');
 							td.classList.add('textRight');
+							if (!priceUpdated) {
+								td.classList.add('transparent');
+							}
 							td.appendChild(document.createTextNode(valuationDisplayString));
 							return td;
 						})());
@@ -477,6 +491,9 @@
 						// Total balance.
 						const td = document.createElement('td');
 						td.classList.add('textRight');
+						if (!addressInfosUpdated) {
+							td.classList.add('transparent');
+						}
 						if (totalBalanceChange != 0) {
 							td.classList.add(totalBalanceChange > 0 ? 'increaseColor' : 'decreaseColor');
 							td.title = totalBalanceChange > 0 ? `+${totalBalanceChange.toLocaleString()}` : `-${Math.abs(totalBalanceChange).toLocaleString()}`;
@@ -489,6 +506,9 @@
 							// Total USD.
 							const td = document.createElement('td');
 							td.classList.add('textRight');
+							if (!priceUpdated) {
+								td.classList.add('transparent');
+							}
 							td.appendChild(document.createTextNode(totalValuationDisplayString));
 							return td;
 						})());
@@ -586,7 +606,7 @@
 		function setupAddressInfosAndRender(addressInfos, scrollOnSuccess = false) {
 			fetchAddressInfosAndPrice(addressInfos)
 				.then(addressInfosAndPrice => {
-					render(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price);
+					render(addressInfosAndPrice.addressInfos, addressInfosAndPrice.price, /* addressInfosUpdated */true, addressInfosAndPrice.priceUpdated);
 					if (scrollOnSuccess) {
 						window.scrollTo(0, document.body.scrollHeight);
 					}
@@ -607,7 +627,7 @@
 			}
 
 			// Render before fetching any external data.
-			render(addressInfos, getPriceFromLocalStorage());
+			render(addressInfos, getPriceFromLocalStorage(), /* addressInfosUpdated */false, /* priceUpdated */false);
 
 			if (addressInfos.length) {
 				setupAddressInfosAndRender(addressInfos);
@@ -784,6 +804,10 @@
 
 		.standardMargin {
 			margin: 0.5em 0.25em 0;
+		}
+
+		.transparent {
+			opacity: 0.7;
 		}
 	</style>
 
