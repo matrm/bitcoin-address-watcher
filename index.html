@@ -651,7 +651,7 @@
 				try {
 					const parsedText = JSON.parse(text);// parsedText.addressInfos will not have instanceof AddressInfo.
 					parsedText.addressInfos = assignAddressInfosDeserializedToNewAddressInfo(parsedText.addressInfos);
-					localStorageNamespaced.setStorageObject(JSON.parse(text));
+					localStorageNamespaced.setStorageObject(parsedText);
 					addressInfosManager.setAddressInfos(parsedText.addressInfos);
 					console.log('Loaded from file.');
 					renderUpdateRender();
