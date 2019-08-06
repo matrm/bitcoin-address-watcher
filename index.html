@@ -23,92 +23,88 @@
 			}
 		}
 
-		// Prevent collisions with sites on the same domain.
-		const localStorageNamespaced = {
-			_localStorageKey: 'matrm-bitcoin-address-watcher',
-			_storage: null,
-			_getStorageObject() {
-				if (this._storage) {
-					return this._storage;
-				}
-				const storageString = localStorage.getItem(this._localStorageKey) || '{}';
-				this._storage = {};
+		class LocalStorageManager {
+			static getNamespace() {
+				// Prevent collisions with sites on the same domain.
+				return 'matrm-bitcoin-address-watcher';
+			}
+			constructor() {
+				const localStorageString = JSON.stringify(localStorage);
 				try {
-					this._storage = JSON.parse(storageString);
+					this.loadFromString(localStorageString);
 				} catch (err) {
 					console.log('Unable to parse localStorage:', err.message);
-					console.log(storageString);
+					console.log(localStorageString);
 					console.log('Resetting localStorage.');
 					localStorage.clear();
 				}
-				return this._storage;
-			},
-			setStorageObject(storage) {
-				localStorage.setItem(this._localStorageKey, JSON.stringify(storage));
-				this._storage = storage;
-			},
-			setItem(k, v) {
-				const storage = this._getStorageObject();
-				storage[k] = v;
-				this.setStorageObject(storage);
-			},
-			getItem(k) {
-				const storage = this._getStorageObject();
-				const item = storage[k];
-				if (item == undefined) {
-					return null;
-				}
-				return item;
-			},
-			toFormattedString() {
-				return JSON.stringify(this._getStorageObject(), null, '\t');
 			}
-		};
+			loadFromString(localStorageString) {
+				console.assert(typeof localStorageString == 'string');
+				let storage = JSON.parse(localStorageString);
+				console.assert(typeof storage == 'object');
 
-		function assignAddressInfosDeserializedToNewAddressInfo(addressInfosDeserialized) {
-			if (Array.isArray(addressInfosDeserialized)) {
-				// Convert deserialized addressInfos to new AddressInfo objects because the serialized json has no functions.
-				return addressInfosDeserialized.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData));
+				{
+					// Remove namespace if there is one. There won't be one when loadng from file.
+					const storageWithoutNamespace = storage[this.constructor.getNamespace()];
+					if (storageWithoutNamespace) {
+						console.assert(typeof storageWithoutNamespace == 'string');
+						storage = JSON.parse(storageWithoutNamespace);
+					}
+				}
+
+				// Convert parsed addressInfos to AddressInfo objects.
+				this._addressInfos = Array.isArray(storage.addressInfos) ?
+					storage.addressInfos.map(addressInfoData => Object.assign(new AddressInfo(), addressInfoData)) :
+					[];
+				this.addressInfosUpdated = this._addressInfos.length == 0;// Allowing this to be true now makes the first time render not be transparent.
+
+				this._price = storage.price;
+				this.priceUpdated = false;
+
+				this.save();
 			}
-			return [];
+			toSimpleObject() {
+				return {
+					// Only save these.
+					addressInfos: this._addressInfos,
+					price: this._price
+				};
+			}
+			toFormattedString() {
+				return JSON.stringify(this.toSimpleObject(), null, '\t');
+			}
+			save() {
+				localStorage.setItem(this.constructor.getNamespace(), JSON.stringify(this.toSimpleObject()));
+			}
+			setPrice(price) {
+				console.assert(typeof price == 'number');
+				this._price = price;
+				this.priceUpdated = true;
+				this.save();
+			}
+			setAddressInfos(addressInfos) {
+				console.assert(Array.isArray(addressInfos));
+				console.assert(!addressInfos.length || addressInfos[0] instanceof AddressInfo);
+				this._addressInfos = addressInfos;
+				this.addressInfosUpdated = true;
+				this.save();
+			}
+			getPrice() {
+				return this._price;
+			}
+			getAddressInfos() {
+				return this._addressInfos;
+			}
 		}
 
-		const ADDRESS_INFOS_LOCAL_STORAGE_KEY = 'addressInfos';
-		const PRICE_LOCAL_STORAGE_KEY = 'price';
+		const localStorageManager = new LocalStorageManager();
 
 		let confirmDeletingAddressAfterTime = Date.now();
 
-		const priceManager = new function () {
-			this._price = parseFloat(localStorageNamespaced.getItem(PRICE_LOCAL_STORAGE_KEY)) || null;
-			this.updated = false;
-			this.setPrice = price => {
-				console.assert(typeof price == 'number');
-				localStorageNamespaced.setItem(PRICE_LOCAL_STORAGE_KEY, price);
-				this._price = price;
-				this.updated = true;
-			};
-			this.getPrice = () => {
-				return this._price;
-			};
-		}();
-
-		const addressInfosManager = new function () {
-			this._addressInfos = assignAddressInfosDeserializedToNewAddressInfo(localStorageNamespaced.getItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY));
-			this.updated = this._addressInfos.length == 0;// Allowing this to be true now makes the first time render not be transparent.
-			this.setAddressInfos = addressInfos => {
-				console.assert(Array.isArray(addressInfos));
-				localStorageNamespaced.setItem(ADDRESS_INFOS_LOCAL_STORAGE_KEY, addressInfos);
-				this._addressInfos = addressInfos;
-				this.updated = true;
-			};
-			this.getAddressInfos = () => {
-				return this._addressInfos;
-			};
-		}();
-
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
-			const localStorageString = localStorageNamespaced.toFormattedString();
+			const localStorageString = localStorageManager.toFormattedString();
 			// https://stackoverflow.com/a/18197341
 			const element = document.createElement('a');
 			element.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(localStorageString);// encodeURIComponent allows file to contain '#' characters.
@@ -259,12 +255,12 @@
 			// Start fetching price now. To be 'await'ed later.
 			const pricePromise = fetchPrice()
 				.then(price => {
-					priceManager.setPrice(price);
+					localStorageManager.setPrice(price);
 				})
 				.catch(error => {
-					priceManager.updated = false;
+					localStorageManager.priceUpdated = false;
 					console.log(error.message);
-					if (priceManager.getPrice()) {
+					if (localStorageManager.getPrice()) {
 						// An alert is only necessary if the price API worked previously.
 						alert(error.message);
 					}
@@ -272,9 +268,9 @@
 
 			try {
 				await updateAddressInfos(addressInfos);
-				addressInfosManager.setAddressInfos(addressInfos);
+				localStorageManager.setAddressInfos(addressInfos);
 			} catch (err) {
-				addressInfosManager.updated = addressInfosManager.getAddressInfos().length == 0;// Allowing this to be true now makes the first time updating not be transparent when it fails.
+				localStorageManager.addressInfosUpdated = localStorageManager.getAddressInfos().length == 0;// Allowing this to be true now makes the first time updating not be transparent when it fails.
 				console.log(err.message);
 				alert(err.message);
 			}
@@ -283,10 +279,10 @@
 		}
 
 		function render() {
-			const addressInfos = addressInfosManager.getAddressInfos();
-			const price = priceManager.getPrice();
-			const addressInfosUpdated = addressInfosManager.updated;
-			const priceUpdated = priceManager.updated;
+			const addressInfos = localStorageManager.getAddressInfos();
+			const price = localStorageManager.getPrice();
+			const addressInfosUpdated = localStorageManager.addressInfosUpdated;
+			const priceUpdated = localStorageManager.priceUpdated;
 
 			const totalBalance = addressInfos.reduce((t, address) => t + address.balance || 0, 0);
 			const totalBalanceChange = addressInfos.reduce((t, address) => t + address.balanceChange, 0);
@@ -564,7 +560,7 @@
 			if (!confirm('Remove addresses with a balance of 0?')) {
 				return;
 			}
-			addressInfosManager.setAddressInfos(addressInfosManager.getAddressInfos().filter(address => address.balance));
+			localStorageManager.setAddressInfos(localStorageManager.getAddressInfos().filter(address => address.balance));
 			render();
 		}
 
@@ -573,7 +569,7 @@
 			if (input == null) {
 				return;
 			}
-			addressInfosManager.setAddressInfos(addressInfosManager.getAddressInfos().filter(address => address.label != input));
+			localStorageManager.setAddressInfos(localStorageManager.getAddressInfos().filter(address => address.label != input));
 			render();
 		}
 
@@ -582,7 +578,7 @@
 			if (!input) {
 				return;
 			}
-			addressInfosManager.setAddressInfos(addressInfosManager.getAddressInfos().filter(address => !address.label.includes(input)));
+			localStorageManager.setAddressInfos(localStorageManager.getAddressInfos().filter(address => !address.label.includes(input)));
 			render();
 		}
 
@@ -590,7 +586,7 @@
 			if (!confirm('Remove all addresses?')) {
 				return;
 			}
-			addressInfosManager.setAddressInfos([]);
+			localStorageManager.setAddressInfos([]);
 			render();
 		}
 
@@ -602,32 +598,32 @@
 				// Prevent accidentally removing an address.
 				return;
 			}
-			const addressInfos = addressInfosManager.getAddressInfos();
+			const addressInfos = localStorageManager.getAddressInfos();
 			addressInfos.splice(index, 1);
-			addressInfosManager.setAddressInfos(addressInfos);
+			localStorageManager.setAddressInfos(addressInfos);
 			render();
 			confirmDeletingAddressAfterTime = Date.now() + 3000;
 		}
 
 		function updateAddressInfosLabelFromIndex(index, label) {
-			const addressInfos = addressInfosManager.getAddressInfos();
+			const addressInfos = localStorageManager.getAddressInfos();
 			addressInfos[index].label = label;
-			addressInfosManager.setAddressInfos(addressInfos);
+			localStorageManager.setAddressInfos(addressInfos);
 		}
 
 		// Download balance for each new AddressInfo, update price, and then update UI.
 		async function updateRender(addressInfos, scrollOnSuccess = false) {
 			await updateAddressInfosAndPrice(addressInfos);
-			if (addressInfosManager.updated || priceManager.updated) {
+			if (localStorageManager.addressInfosUpdated || localStorageManager.priceUpdated) {
 				render();
-				if (scrollOnSuccess && addressInfosManager.updated) {
+				if (scrollOnSuccess && localStorageManager.addressInfosUpdated) {
 					window.scrollTo(0, document.body.scrollHeight);
 				}
 			}
 		}
 
 		function renderUpdateRender() {
-			const addressInfos = addressInfosManager.getAddressInfos();
+			const addressInfos = localStorageManager.getAddressInfos();
 
 			// Unset all the balanceLastUpdate because rendering balance changes the first time is pointless.
 			const defaultBalanceLastUpdate = new AddressInfo().balanceLastUpdate;
@@ -646,13 +642,9 @@
 		function loadFromFileAndRender(inputTarget) {
 			// https://stackoverflow.com/a/29176118
 			const reader = new FileReader();
-			reader.onload = function () {
-				const text = reader.result;
+			reader.onload = () => {
 				try {
-					const parsedText = JSON.parse(text);// parsedText.addressInfos will not have instanceof AddressInfo.
-					parsedText.addressInfos = assignAddressInfosDeserializedToNewAddressInfo(parsedText.addressInfos);
-					localStorageNamespaced.setStorageObject(parsedText);
-					addressInfosManager.setAddressInfos(parsedText.addressInfos);
+					localStorageManager.loadFromString(reader.result);
 					console.log('Loaded from file.');
 					renderUpdateRender();
 				} catch (err) {
@@ -661,7 +653,7 @@
 					alert(errorMessage);
 				}
 			};
-			reader.onerror = function (event) {
+			reader.onerror = event => {
 				reader.abort();
 				const errorMessage = 'Error reading file.';
 				console.log(errorMessage);
@@ -686,7 +678,8 @@
 			inputAddresses.value = '';
 
 			// Convert addresses to AddressInfo objects and combine with the AddressInfos from localStorage.
-			const addressInfos = addressInfosManager.getAddressInfos().concat(addresses.map(a => new AddressInfo(a)));
+			// Addresses are only added to localStorage if their info is successfully loaded from an API.
+			const addressInfos = localStorageManager.getAddressInfos().concat(addresses.map(a => new AddressInfo(a)));
 
 			updateRender(addressInfos, /* scrollOnSuccess */true);
 		}
