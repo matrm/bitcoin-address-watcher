@@ -442,9 +442,9 @@
 								td.title += '\n';
 							}
 							if (balance) {
-								td.title += 'Warning: This address has been re-used after being involved in a spent transaction.';
+								td.title += 'Warning: This address has a balance after transactions sent to this address have been spent.';
 							} else {
-								td.title += 'This address has been involved in a spent transaction.';
+								td.title += 'Transactions sent to this address have been spent.';
 							}
 						}
 						td.appendChild(document.createTextNode(balanceDisplayString));
