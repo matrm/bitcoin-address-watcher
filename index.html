@@ -404,7 +404,6 @@
 							const input = document.createElement('input');
 							input.classList.add('labelInput');
 							input.type = 'text';
-							input.title = `Remove address ${i + 1}`;
 							input.value = addressInfo.label;
 							input.onchange = () => { updateAddressInfosLabelFromIndex(i, input.value); };
 							return input;
