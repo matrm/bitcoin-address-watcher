@@ -384,13 +384,13 @@
 						const td = document.createElement('td');
 						td.classList.add('tdWithInput');
 						td.appendChild((() => {
-							const button = document.createElement('button');
-							button.classList.add('labelInput');
-							button.classList.add('labelInputButton');
+							const button = document.createElement('input');
+							button.classList.add('input');
+							button.classList.add('inputButton');
 							button.classList.add('deleteAddressButton');
 							button.type = 'button';
 							button.title = `Remove address ${i + 1}`;
-							button.appendChild(document.createTextNode('X'));
+							button.value = 'X';
 							button.onclick = () => { removeAddressInfosIndex(i); };
 							return button;
 						})());
@@ -402,10 +402,10 @@
 						td.classList.add('tdWithInput');
 						td.appendChild((() => {
 							const input = document.createElement('input');
-							input.classList.add('labelInput');
+							input.classList.add('input');
 							input.type = 'text';
 							input.value = addressInfo.label;
-							input.onchange = () => { updateAddressInfosLabelFromIndex(i, input.value); };
+							input.onchange = () => updateAddressInfosLabelFromIndex(i, input.value);
 							return input;
 						})());
 						return td;
@@ -531,13 +531,13 @@
 				})());
 
 				// Remove multiple address buttons.
-				const createRemoveAddressesButton = function (onclick, value, title) {
+				const createRemoveAddressesButton = (onclick, value, title) => {
 					console.assert(onclick instanceof Function);
 					console.assert(value);
 					const button = document.createElement('input');
 					button.type = 'button';
-					button.classList.add('labelInput');
-					button.classList.add('labelInputButton');
+					button.classList.add('input');
+					button.classList.add('inputButton');
 					button.classList.add('standardMargin');
 					button.onclick = onclick;
 					button.value = value;
@@ -565,7 +565,7 @@
 
 		function removeAddressInfosMatchingPromptLabel() {
 			const input = prompt('Remove addresses with label matching text (or leave blank to remove all unlabeled addresses):');
-			if (input == null) {
+			if (input == null) {// Do not change this to "if (!input)" or else empty strings will be rejected.
 				return;
 			}
 			localStorageManager.setAddressInfos(localStorageManager.getAddressInfos().filter(address => address.label != input));
@@ -683,9 +683,7 @@
 			updateRender(addressInfos, /* scrollOnSuccess */true);
 		}
 
-		window.onload = function () {
-			renderUpdateRender();
-		}
+		window.onload = renderUpdateRender;
 
 	</script>
 
@@ -764,7 +762,7 @@
 			padding: 0;
 		}
 
-		button.deleteAddressButton {
+		input.deleteAddressButton {
 			color: #d00;
 		}
 
@@ -780,7 +778,7 @@
 			color: #d00;
 		}
 
-		.labelInput {
+		.input {
 			background-color: #000;
 			color: #ddd;
 			border: 0.1em solid #666;
@@ -798,11 +796,11 @@
 			border-radius: 0.3em;
 		}
 
-		.labelInputButton {
+		.inputButton {
 			cursor: pointer;
 		}
 
-		.labelInputButton:hover {
+		.inputButton:hover {
 			background-color: #005;
 		}
 
@@ -823,18 +821,18 @@
 
 		<div id="headersContainer"></div>
 
-		<input id="inputAddresses" class="labelInput" type="text" size="64"
+		<input id="inputAddresses" class="input" type="text" size="64"
 			placeholder="Input one or more addresses separated by commas" />
-		<input class="labelInput labelInputButton" type="button" value="Add Addresses" onclick="addInputAddresses()" />
+		<input class="input inputButton" type="button" value="Add Addresses" onclick="addInputAddresses()" />
 
 		<div id="addressesTableContainer"></div>
 
 		<div id="removeAddressesButtonsContainer"></div>
 
-		<label class="labelInput labelInputButton standardMargin">
+		<label class="input inputButton standardMargin">
 			<input style="display: none;" type="file" accept=".json" onchange="loadFromFileAndRender(event.target)" />
 			Import
-		</label><input class="labelInput labelInputButton standardMargin" type="button" value="Export"
+		</label><input class="input inputButton standardMargin" type="button" value="Export"
 			onclick="backupToFile()" />
 
 	</div>
