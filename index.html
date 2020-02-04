@@ -102,6 +102,17 @@
 
 		let confirmDeletingAddressAfterTime = Date.now();
 
+		// Returns an array with arrays of the given size.
+		function chunkArray(array, chunkSize) {
+			const results = [];
+
+			while (array.length) {
+				results.push(array.splice(0, chunkSize));
+			}
+
+			return results;
+		}
+
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
 			const localStorageString = localStorageManager.toFormattedString();
@@ -171,6 +182,63 @@
 			throw new Error(`${errorMessages.length > 1 ? 'Error updating price from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
 		}
 
+		async function updateAddressInfosFromBlockchair(addressInfos) {
+			console.assert(addressInfos.length);
+
+			// Convert AddressInfo array to address (string) array.
+			const addresses = addressInfos.map(addressInfo => addressInfo.address);
+
+			// Prevent requesting info on too many addresses at once.
+			// Array of arrays of addresses.
+			const chunksOfAddresses = chunkArray(addresses, 100);
+
+			const urls = chunksOfAddresses.map(chunkOfAddresses => `https://api.blockchair.com/bitcoin-sv/dashboards/addresses/${chunkOfAddresses.join(',')}`);
+
+			const responses = await Promise.all(urls.map(url => fetch(url)));
+
+			const responseJSONs = await Promise.all(responses.map(response => {
+				if (!response.ok) {
+					throw new Error(`Request for address info rejected with status ${response.status}`);
+				}
+				return response.json();
+			}));
+
+			// Values are the same as returned by the API.
+			const addressKey_InfoValue = {};
+
+			responseJSONs.forEach(responseJSON => {
+				const responseJSON_data = responseJSON.data;
+				if (responseJSON_data) {
+					const responseJSON_data_addresses = responseJSON_data.addresses;
+					Object.assign(addressKey_InfoValue, responseJSON_data_addresses);
+				} else {
+					throw new Error('Invalid data received when fetching address info');
+				}
+			});
+
+			// Check for missing addresses.
+			addressInfos.forEach(addressInfo => {
+				if (!(addressInfo.address in addressKey_InfoValue)) {
+					throw new Error('Invalid number of addresses received when fetching address info');
+				}
+			});
+
+			addressInfos.forEach(addressInfo => {
+				const addressInfoApiData = addressKey_InfoValue[addressInfo.address];
+				const balance = addressInfoApiData.balance;
+				const spent = addressInfoApiData.spent;
+				if (typeof balance != 'number') {
+					throw new Error(`Invalid balance data (${balance}) received when fetching address info`);
+				}
+				if (typeof spent != 'number') {
+					throw new Error(`Invalid spent data (${spent}) received when fetching address info`);
+				}
+				addressInfo.balanceLastUpdate = addressInfo.balance;
+				addressInfo.balance = balance;
+				addressInfo.spent = spent;
+			});
+		}
+
 		async function updateAddressInfosFromBitindex(addressInfos) {
 			console.assert(addressInfos.length);
 
@@ -228,16 +296,14 @@
 
 			const errorMessages = [];
 
-			/* Example for how to add an address info update source:
 			try {
-				// Use ____ first because it can update AddressInfo spent property.
-				await updateAddressInfosFrom____(addressInfos);
+				// Use Blockchair first because it can update AddressInfo spent property.
+				await updateAddressInfosFromBlockchair(addressInfos);
 				return;
 			} catch (err) {
 				console.log(err);
-				errorMessages.push(`Error updating address info from ____: ${err.message}`);
+				errorMessages.push(`Error updating address info from Blockchair: ${err.message}`);
 			}
-			*/
 
 			try {
 				await updateAddressInfosFromBitindex(addressInfos);
