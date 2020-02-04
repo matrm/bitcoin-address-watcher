@@ -197,7 +197,8 @@
 			const responses = await Promise.all(urls.map(url => fetch(url)));
 
 			const responseJSONs = await Promise.all(responses.map(response => {
-				if (!response.ok) {
+				// Blockchair API returns status 404 when none of the addresses have been used, invalid or not.
+				if (!response.ok && response.status != 404) {
 					throw new Error(`Request for address info rejected with status ${response.status}`);
 				}
 				return response.json();
@@ -208,23 +209,28 @@
 
 			responseJSONs.forEach(responseJSON => {
 				const responseJSON_data = responseJSON.data;
-				if (responseJSON_data) {
+				const responseJSON_context = responseJSON.context;
+				const responseJSON_status = responseJSON_context.code;
+				const responseJSON_error = responseJSON_context.error;
+				if (responseJSON_data && responseJSON_status === 200) {
 					const responseJSON_data_addresses = responseJSON_data.addresses;
 					Object.assign(addressKey_InfoValue, responseJSON_data_addresses);
-				} else {
+				} else if (responseJSON_status !== 404 || responseJSON_error !== "We couldn't find any of the addresses") {
+					// Blockchair API returns status 404 when none of the addresses have been used, invalid or not.
 					throw new Error('Invalid data received when fetching address info');
-				}
-			});
-
-			// Check for missing addresses.
-			addressInfos.forEach(addressInfo => {
-				if (!(addressInfo.address in addressKey_InfoValue)) {
-					throw new Error('Invalid number of addresses received when fetching address info');
 				}
 			});
 
 			addressInfos.forEach(addressInfo => {
 				const addressInfoApiData = addressKey_InfoValue[addressInfo.address];
+				if (!addressInfoApiData) {
+					// Unused addresses will not be returned by Blockchair API.
+					// Invalid addresses are not detected by the Blockchair API yet or from here so they are still added to the table.
+					addressInfo.balanceLastUpdate = addressInfo.balance;
+					addressInfo.balance = 0;
+					addressInfo.spent = 0;
+					return;
+				}
 				const balance = addressInfoApiData.balance;
 				const spent = addressInfoApiData.spent;
 				if (typeof balance != 'number') {
