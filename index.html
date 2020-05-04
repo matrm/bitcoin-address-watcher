@@ -217,7 +217,7 @@
 					Object.assign(addressKey_InfoValue, responseJSON_data_addresses);
 				} else if (responseJSON_status !== 404 || responseJSON_error !== "We couldn't find any of the addresses") {
 					// Blockchair API returns status 404 when none of the addresses have been used, invalid or not.
-					throw new Error('Invalid data received when fetching address info');
+					throw new Error('Invalid data received');
 				}
 			});
 
@@ -234,10 +234,10 @@
 				const balance = addressInfoApiData.balance;
 				const spent = addressInfoApiData.spent;
 				if (typeof balance != 'number') {
-					throw new Error(`Invalid balance data (${balance}) received when fetching address info`);
+					throw new Error(`Invalid balance data (${balance}) received`);
 				}
 				if (typeof spent != 'number') {
-					throw new Error(`Invalid spent data (${spent}) received when fetching address info`);
+					throw new Error(`Invalid spent data (${spent}) received`);
 				}
 				addressInfo.balanceLastUpdate = addressInfo.balance;
 				addressInfo.balance = balance;
@@ -280,17 +280,101 @@
 
 			const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
 
-			if (!Array.isArray(data) || data.length != addressInfos.length) {
-				throw new Error('Invalid data received when fetching address balances');
+			if (!Array.isArray(data)) {
+				console.log(`Error: Expected an array but received ${typeof data}.`);
+				throw new Error('Invalid data type received');
+			}
+
+			if (data.length != addressInfos.length) {
+				throw new Error(`Received data for ${data.length} out of ${addressInfos.length} expected addresses`);
 			}
 
 			for (let i = 0; i < data.length; i++) {
+				const address = data[i].address;
 				const confirmed = data[i].confirmed;
 				const unconfirmed = data[i].unconfirmed;
-				if (typeof confirmed == 'number' && typeof unconfirmed == 'number') {
-					addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
-					addressInfos[i].balance = confirmed + unconfirmed;
+				if (address !== addressInfos[i].address) {
+					throw new Error(`Invalid or out of order address "${address}" received`);
 				}
+				if (typeof confirmed != 'number' || typeof unconfirmed != 'number') {
+					const errorMessage = 'Unexpected balance data received';
+					console.log(errorMessage);
+					console.log('address:', confirmed);
+					console.log('confirmed:', confirmed);
+					console.log('unconfirmed:', unconfirmed);
+					throw new Error(errorMessage);
+				}
+				addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
+				addressInfos[i].balance = confirmed + unconfirmed;
+				// addressInfos[i].balance may be a number or the default initial value.
+			}
+		}
+
+		async function updateAddressInfosFromMatterCloud(addressInfos) {
+			console.assert(addressInfos.length);
+
+			// Convert AddressInfo array to address (string) array.
+			const addresses = addressInfos.map(addressInfo => addressInfo.address);
+
+			// Addresses can be comma-separated values.
+			const url = 'https://api.mattercloud.net/api/v3/main/address/balance';
+
+			const response = await fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					addrs: addresses.join(',')
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error(`Request for address info rejected with status ${response.status}`);
+			}
+
+			const responseJSON = await response.json();
+			/* Example responseJSON:
+				[
+					{
+						"address": "1BitcoinEaterAddressDontSendf59kuE",
+						"confirmed": 63791,
+						"unconfirmed": 0
+					},
+					{
+						"address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+						"confirmed": 1392000,
+						"unconfirmed": 144237
+					}
+				]
+			*/
+
+			if (!Array.isArray(responseJSON)) {
+				console.log(`Error: Expected an array but received ${typeof responseJSON}.`);
+				throw new Error('Invalid data type received');
+			}
+
+			if (responseJSON.length != addressInfos.length) {
+				throw new Error(`Received data for ${responseJSON.length} out of ${addressInfos.length} expected addresses`);
+			}
+
+			for (let i = 0; i < responseJSON.length; i++) {
+				const address = responseJSON[i].address;
+				const confirmed = responseJSON[i].confirmed;
+				const unconfirmed = responseJSON[i].unconfirmed;
+				if (address !== addressInfos[i].address) {
+					throw new Error(`Invalid or out of order address "${address}" received`);
+				}
+				if (typeof confirmed != 'number' || typeof unconfirmed != 'number') {
+					const errorMessage = 'Unexpected balance data received';
+					console.log(errorMessage);
+					console.log('address:', confirmed);
+					console.log('confirmed:', confirmed);
+					console.log('unconfirmed:', unconfirmed);
+					throw new Error(errorMessage);
+				}
+				addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
+				addressInfos[i].balance = confirmed + unconfirmed;
 				// addressInfos[i].balance may be a number or the default initial value.
 			}
 		}
@@ -303,12 +387,11 @@
 			const errorMessages = [];
 
 			try {
-				// Use Blockchair first because it can update AddressInfo spent property.
-				await updateAddressInfosFromBlockchair(addressInfos);
+				await updateAddressInfosFromMatterCloud(addressInfos);
 				return;
 			} catch (err) {
 				console.log(err);
-				errorMessages.push(`Error updating address info from Blockchair: ${err.message}`);
+				errorMessages.push(`Error updating address info from MatterCloud: ${err.message}`);
 			}
 
 			try {
@@ -319,7 +402,16 @@
 				errorMessages.push(`Error updating address info from Bitindex: ${err.message}`);
 			}
 
-			throw new Error(`${errorMessages.length > 1 ? 'Error updating address info from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
+			try {
+				// Ideally use Blockchair first if it has higher rate limits because it can update AddressInfo spent property.
+				await updateAddressInfosFromBlockchair(addressInfos);
+				return;
+			} catch (err) {
+				console.log(err);
+				errorMessages.push(`Error updating address info from Blockchair: ${err.message}`);
+			}
+
+			throw new Error(`${errorMessages.length > 2 ? 'Error updating address info from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
 		}
 
 		// Requests both at the same time.
