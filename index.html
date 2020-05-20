@@ -62,20 +62,23 @@
 				this._price = storage.price;
 				this.priceUpdated = false;
 
+				this._timeOfNextAllowedBlockchairApiCall = storage.timeOfNextAllowedBlockchairApiCall || Date.now() + 600000;// Do not waste an API call until 10 minutes after first time visiting to give time to add addresses.
+
 				this.save();
 			}
-			toSimpleObject() {
+			toSaveObject() {
 				return {
 					// Only save these.
 					addressInfos: this._addressInfos,
-					price: this._price
+					price: this._price,
+					timeOfNextAllowedBlockchairApiCall: this._timeOfNextAllowedBlockchairApiCall
 				};
 			}
-			toFormattedString() {
-				return JSON.stringify(this.toSimpleObject(), null, '\t');
+			toExportString() {
+				return JSON.stringify(this.toSaveObject(), null, '\t');
 			}
 			save() {
-				localStorage.setItem(this.constructor.getNamespace(), JSON.stringify(this.toSimpleObject()));
+				localStorage.setItem(this.constructor.getNamespace(), JSON.stringify(this.toSaveObject()));
 			}
 			setPrice(price) {
 				console.assert(typeof price == 'number');
@@ -90,11 +93,21 @@
 				this.addressInfosUpdated = true;
 				this.save();
 			}
+			setTimeOfNextAllowedBlockchairApiCall(timeOfNextAllowedBlockchairApiCall) {
+				console.assert(typeof timeOfNextAllowedBlockchairApiCall == 'number');
+				console.assert(timeOfNextAllowedBlockchairApiCall > 0);
+				this._timeOfNextAllowedBlockchairApiCall = timeOfNextAllowedBlockchairApiCall;
+			}
 			getPrice() {
 				return this._price;
 			}
 			getAddressInfos() {
 				return this._addressInfos;
+			}
+			getTimeOfNextAllowedBlockchairApiCall() {
+				console.assert(typeof this._timeOfNextAllowedBlockchairApiCall == 'number');
+				console.assert(this._timeOfNextAllowedBlockchairApiCall > 0);
+				return this._timeOfNextAllowedBlockchairApiCall;
 			}
 		}
 
@@ -115,7 +128,7 @@
 
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
-			const localStorageString = localStorageManager.toFormattedString();
+			const localStorageString = localStorageManager.toExportString();
 			// https://stackoverflow.com/a/18197341
 			const element = document.createElement('a');
 			element.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(localStorageString);// encodeURIComponent allows file to contain '#' characters.
@@ -164,8 +177,10 @@
 
 		async function fetchPrice() {
 			const errorMessages = [];
+			let maxNumErrorMessages = 0;
 
 			try {
+				maxNumErrorMessages++;
 				return await fetchPriceFromPoloniex();
 			} catch (err) {
 				console.log(err);
@@ -173,13 +188,14 @@
 			}
 
 			try {
+				maxNumErrorMessages++;
 				return await fetchPriceFromBlockchair();
 			} catch (err) {
 				console.log(err);
 				errorMessages.push(`Error updating price from Blockchair: ${err.message}`);
 			}
 
-			throw new Error(`${errorMessages.length > 1 ? 'Error updating price from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
+			throw new Error(`${errorMessages.length >= maxNumErrorMessages ? 'Error updating price from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
 		}
 
 		async function updateAddressInfosFromBlockchair(addressInfos) {
@@ -385,8 +401,23 @@
 			}
 
 			const errorMessages = [];
+			let maxNumErrorMessages = 0;
+
+			if (localStorageManager.getTimeOfNextAllowedBlockchairApiCall() <= Date.now()) {
+				try {
+					maxNumErrorMessages++;
+					// Use Blockchair first because it can update AddressInfo spent property.
+					await updateAddressInfosFromBlockchair(addressInfos);
+					localStorageManager.setTimeOfNextAllowedBlockchairApiCall(Date.now() + 171000000);// 47.5 hours from now.
+					return;
+				} catch (err) {
+					console.log(err);
+					errorMessages.push(`Error updating address info from Blockchair: ${err.message}`);
+				}
+			}
 
 			try {
+				maxNumErrorMessages++;
 				await updateAddressInfosFromMatterCloud(addressInfos);
 				return;
 			} catch (err) {
@@ -395,6 +426,7 @@
 			}
 
 			try {
+				maxNumErrorMessages++;
 				await updateAddressInfosFromBitindex(addressInfos);
 				return;
 			} catch (err) {
@@ -402,16 +434,7 @@
 				errorMessages.push(`Error updating address info from Bitindex: ${err.message}`);
 			}
 
-			try {
-				// Ideally use Blockchair first if it has higher rate limits because it can update AddressInfo spent property.
-				await updateAddressInfosFromBlockchair(addressInfos);
-				return;
-			} catch (err) {
-				console.log(err);
-				errorMessages.push(`Error updating address info from Blockchair: ${err.message}`);
-			}
-
-			throw new Error(`${errorMessages.length > 2 ? 'Error updating address info from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
+			throw new Error(`${errorMessages.length >= maxNumErrorMessages ? 'Error updating address info from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
 		}
 
 		// Requests both at the same time.
