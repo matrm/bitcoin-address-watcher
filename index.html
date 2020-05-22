@@ -407,8 +407,8 @@
 				try {
 					maxNumErrorMessages++;
 					// Use Blockchair first because it can update AddressInfo spent property.
-					await updateAddressInfosFromBlockchair(addressInfos);
 					localStorageManager.setTimeOfNextAllowedBlockchairApiCall(Date.now() + 171000000);// 47.5 hours from now.
+					await updateAddressInfosFromBlockchair(addressInfos);
 					return;
 				} catch (err) {
 					console.log(err);
