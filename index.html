@@ -40,15 +40,15 @@
 				}
 			}
 			loadFromString(localStorageString) {
-				console.assert(typeof localStorageString == 'string');
+				assert(typeof localStorageString == 'string');
 				let storage = JSON.parse(localStorageString);
-				console.assert(typeof storage == 'object');
+				assert(typeof storage == 'object');
 
 				{
 					// Remove namespace if there is one. There won't be one when loadng from file.
 					const storageWithoutNamespace = storage[this.constructor.getNamespace()];
 					if (storageWithoutNamespace) {
-						console.assert(typeof storageWithoutNamespace == 'string');
+						assert(typeof storageWithoutNamespace == 'string');
 						storage = JSON.parse(storageWithoutNamespace);
 					}
 				}
@@ -81,21 +81,21 @@
 				localStorage.setItem(this.constructor.getNamespace(), JSON.stringify(this.toSaveObject()));
 			}
 			setPrice(price) {
-				console.assert(typeof price == 'number');
+				assert(typeof price == 'number');
 				this._price = price;
 				this.priceUpdated = true;
 				this.save();
 			}
 			setAddressInfos(addressInfos) {
-				console.assert(Array.isArray(addressInfos));
-				console.assert(!addressInfos.length || addressInfos[0] instanceof AddressInfo);
+				assert(Array.isArray(addressInfos));
+				assert(!addressInfos.length || addressInfos[0] instanceof AddressInfo);
 				this._addressInfos = addressInfos;
 				this.addressInfosUpdated = true;
 				this.save();
 			}
 			setTimeOfNextAllowedBlockchairApiCall(timeOfNextAllowedBlockchairApiCall) {
-				console.assert(typeof timeOfNextAllowedBlockchairApiCall == 'number');
-				console.assert(timeOfNextAllowedBlockchairApiCall > 0);
+				assert(typeof timeOfNextAllowedBlockchairApiCall == 'number');
+				assert(timeOfNextAllowedBlockchairApiCall > 0);
 				this._timeOfNextAllowedBlockchairApiCall = timeOfNextAllowedBlockchairApiCall;
 			}
 			getPrice() {
@@ -105,8 +105,8 @@
 				return this._addressInfos;
 			}
 			getTimeOfNextAllowedBlockchairApiCall() {
-				console.assert(typeof this._timeOfNextAllowedBlockchairApiCall == 'number');
-				console.assert(this._timeOfNextAllowedBlockchairApiCall > 0);
+				assert(typeof this._timeOfNextAllowedBlockchairApiCall == 'number');
+				assert(this._timeOfNextAllowedBlockchairApiCall > 0);
 				return this._timeOfNextAllowedBlockchairApiCall;
 			}
 		}
@@ -114,6 +114,15 @@
 		const localStorageManager = new LocalStorageManager();
 
 		let confirmDeletingAddressAfterTime = Date.now();
+
+		function assert(b) {
+		if (!b) {
+			const errorMessage = `Assertion failed: ${b}`;
+			console.error(errorMessage);
+			alert('Error: Assertion failure. Do not continue.');
+			throw new Error(errorMessage);
+		}
+	}
 
 		// Returns an array with arrays of the given size.
 		function chunkArray(array, chunkSize) {
@@ -199,7 +208,7 @@
 		}
 
 		async function updateAddressInfosFromBlockchair(addressInfos) {
-			console.assert(addressInfos.length);
+			assert(addressInfos.length);
 
 			// Convert AddressInfo array to address (string) array.
 			const addresses = addressInfos.map(addressInfo => addressInfo.address);
@@ -262,7 +271,7 @@
 		}
 
 		async function updateAddressInfosFromBitindex(addressInfos) {
-			console.assert(addressInfos.length);
+			assert(addressInfos.length);
 
 			// Convert AddressInfo array to address (string) array.
 			const addresses = addressInfos.map(addressInfo => addressInfo.address);
@@ -327,7 +336,7 @@
 		}
 
 		async function updateAddressInfosFromMatterCloud(addressInfos) {
-			console.assert(addressInfos.length);
+			assert(addressInfos.length);
 
 			// Convert AddressInfo array to address (string) array.
 			const addresses = addressInfos.map(addressInfo => addressInfo.address);
@@ -719,8 +728,8 @@
 
 				// Remove multiple address buttons.
 				const createRemoveAddressesButton = (onclick, value, title) => {
-					console.assert(onclick instanceof Function);
-					console.assert(value);
+					assert(onclick instanceof Function);
+					assert(value);
 					const button = document.createElement('input');
 					button.type = 'button';
 					button.classList.add('input');
