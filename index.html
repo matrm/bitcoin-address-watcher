@@ -135,6 +135,13 @@
 			return results;
 		}
 
+		function removeElementChildren(e) {
+			// https://stackoverflow.com/a/3955238
+			while (e.firstChild) {
+				e.removeChild(e.firstChild);
+			}
+		}
+
 		function backupToFile() {
 			const suggestedFileName = 'bitcoin-address-watcher-backup-' + Math.floor(Date.now() / 1000).toString() + '.json';
 			const localStorageString = localStorageManager.toExportString();
@@ -487,22 +494,13 @@
 			const totalValuationDisplayString = totalValuation.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
 			const headersContainer = document.getElementById('headersContainer');
-			while (headersContainer.firstChild) {
-				// Remove current headers. https://stackoverflow.com/a/3955238
-				headersContainer.removeChild(headersContainer.firstChild);
-			}
+			removeElementChildren(headersContainer);
 
 			const addressesTableContainer = document.getElementById('addressesTableContainer');
-			while (addressesTableContainer.firstChild) {
-				// Remove current table. https://stackoverflow.com/a/3955238
-				addressesTableContainer.removeChild(addressesTableContainer.firstChild);
-			}
+			removeElementChildren(addressesTableContainer);
 
 			const removeAddressesButtonsContainer = document.getElementById('removeAddressesButtonsContainer');
-			while (removeAddressesButtonsContainer.firstChild) {
-				// Remove current remove addresses buttons. https://stackoverflow.com/a/3955238
-				removeAddressesButtonsContainer.removeChild(removeAddressesButtonsContainer.firstChild);
-			}
+			removeElementChildren(removeAddressesButtonsContainer);
 
 			const totalBalanceHeader = document.createElement('h1');
 			if (!addressInfosUpdated) {
