@@ -116,13 +116,17 @@
 		let confirmDeletingAddressAfterTime = Date.now();
 
 		function assert(b) {
-		if (!b) {
-			const errorMessage = `Assertion failed: ${b}`;
-			console.error(errorMessage);
-			alert('Error: Assertion failure. Do not continue.');
-			throw new Error(errorMessage);
+			if (!b) {
+				const errorMessage = `Assertion failed: ${b}`;
+				console.error(errorMessage);
+				alert('Error: Assertion failure. Do not continue.');
+				throw new Error(errorMessage);
+			}
 		}
-	}
+
+		function sleep_ms(ms) {
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
 
 		// Returns an array with arrays of the given size.
 		function chunkArray(array, chunkSize) {
@@ -157,6 +161,36 @@
 			document.body.removeChild(element);
 		}
 
+		async function fetchPriceFromWhatsonchain() {
+			const url = 'https://api.whatsonchain.com/v1/bsv/main/exchangerate';
+
+			const response = await fetch(url);
+
+			if (!response.ok) {
+				throw new Error(`Request for price rejected with status ${response.status}`);
+			}
+
+			const responseJSON = await response.json();
+			/* Example responseJSON:
+				{
+					"currency": "USD",
+					"rate": "87.18199999999999"
+				}
+			*/
+
+			if (responseJSON.currency !== 'USD') {
+				throw new Error(`Unexpected price currency: "${responseJSON.currency}"`);
+			}
+
+			const price = parseFloat(responseJSON.rate) / 100000000;
+
+			if (!Number.isFinite(price)) {
+				throw new Error(`Price of "${responseJSON.rate}" is invalid`);
+			}
+
+			return price;
+		}
+
 		async function fetchPriceFromPoloniex() {
 			const url = 'https://poloniex.com/public?command=returnTicker';
 
@@ -168,34 +202,26 @@
 
 			const responseJSON = await response.json();
 
-			return parseFloat(responseJSON.USDC_BCHSV.last) / 100000000;
-		}
+			const price = parseFloat(responseJSON.USDC_BCHSV.last) / 100000000;
 
-		async function fetchPriceFromBlockchair() {
-			const url = 'https://api.blockchair.com/bitcoin-sv/stats';
-
-			const response = await fetch(url);
-
-			if (!response.ok) {
-				throw new Error(`Request for price rejected with status ${response.status}`);
+			if (!Number.isFinite(price)) {
+				throw new Error(`Price of "${responseJSON.rate}" is invalid`);
 			}
 
-			const responseJSON = await response.json();
-
-			const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
-			const market_cap_usd = data.market_cap_usd;
-			const circulation = data.circulation;
-
-			if (typeof market_cap_usd != 'number' || typeof circulation != 'number' || circulation < 1763916464692325) {
-				throw new Error(`Unable to derive price from market cap of ${market_cap_usd} and circulation of ${circulation}`);
-			}
-
-			return market_cap_usd / circulation;
+			return price;
 		}
 
 		async function fetchPrice() {
 			const errorMessages = [];
 			let maxNumErrorMessages = 0;
+
+			try {
+				maxNumErrorMessages++;
+				return await fetchPriceFromWhatsonchain();
+			} catch (err) {
+				console.log(err);
+				errorMessages.push(`Error updating price from Whatsonchain: ${err.message}`);
+			}
 
 			try {
 				maxNumErrorMessages++;
@@ -205,143 +231,116 @@
 				errorMessages.push(`Error updating price from Poloniex: ${err.message}`);
 			}
 
-			try {
-				maxNumErrorMessages++;
-				return await fetchPriceFromBlockchair();
-			} catch (err) {
-				console.log(err);
-				errorMessages.push(`Error updating price from Blockchair: ${err.message}`);
-			}
-
 			throw new Error(`${errorMessages.length >= maxNumErrorMessages ? 'Error updating price from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
 		}
 
-		async function updateAddressInfosFromBlockchair(addressInfos) {
+		async function updateAddressInfosFromWhatsonchain(addressInfos) {
 			assert(addressInfos.length);
 
 			// Convert AddressInfo array to address (string) array.
 			const addresses = addressInfos.map(addressInfo => addressInfo.address);
+			const addressesSet = new Set(addresses);
 
 			// Prevent requesting info on too many addresses at once.
 			// Array of arrays of addresses.
-			const chunksOfAddresses = chunkArray(addresses, 100);
+			const chunksOfAddresses = chunkArray([...addresses], 20);
 
-			const urls = chunksOfAddresses.map(chunkOfAddresses => `https://api.blockchair.com/bitcoin-sv/dashboards/addresses/${chunkOfAddresses.join(',')}`);
+			const url = 'https://api.whatsonchain.com/v1/bsv/main/addresses/balance';
 
-			const responses = await Promise.all(urls.map(url => fetch(url)));
+			const responseJSONs = [];
+			let beforeRequestTime = Date.now();
+			let lastRequestDuration = 0;
+			const MIN_TIME_BETWEEN_REQUESTS = 500;
+			for (const chunkOfAddresses of chunksOfAddresses) {
 
-			const responseJSONs = await Promise.all(responses.map(response => {
-				// Blockchair API returns status 404 when none of the addresses have been used, invalid or not.
-				if (!response.ok && response.status != 404) {
+				beforeRequestTime += lastRequestDuration;// Start the next timer before sleeping.
+				if (lastRequestDuration > 0 && lastRequestDuration < MIN_TIME_BETWEEN_REQUESTS) {
+					const sleepDuration = MIN_TIME_BETWEEN_REQUESTS - lastRequestDuration;
+					console.log(`Sleeping for ${sleepDuration}ms to prevent Whatsonchain API rate limit.`);
+					await sleep_ms(sleepDuration);
+				}
+
+				const response = await fetch(url, {
+					method: 'POST',
+					cache: 'no-cache',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						addresses: chunkOfAddresses
+					}),
+				});
+
+				if (!response.ok) {
 					throw new Error(`Request for address info rejected with status ${response.status}`);
 				}
-				return response.json();
-			}));
 
-			// Values are the same as returned by the API.
-			const addressKey_InfoValue = {};
+				const responseJSON = await response.json();
 
-			responseJSONs.forEach(responseJSON => {
-				const responseJSON_data = responseJSON.data;
-				const responseJSON_context = responseJSON.context;
-				const responseJSON_status = responseJSON_context.code;
-				const responseJSON_error = responseJSON_context.error;
-				if (responseJSON_data && responseJSON_status === 200) {
-					const responseJSON_data_addresses = responseJSON_data.addresses;
-					Object.assign(addressKey_InfoValue, responseJSON_data_addresses);
-				} else if (responseJSON_status !== 404 || responseJSON_error !== "We couldn't find any of the addresses") {
-					// Blockchair API returns status 404 when none of the addresses have been used, invalid or not.
-					throw new Error('Invalid data received');
+				if (!Array.isArray(responseJSON)) {
+					console.error(`Error: Expected an array but received ${typeof responseJSON}.`);
+					throw new Error('Invalid data type received');
 				}
+
+				responseJSONs.push(...responseJSON);
+
+				lastRequestDuration = Date.now() - beforeRequestTime;
+			};
+
+			const addressKey_BalanceValue = {};
+
+			/* responseJSONs example:
+			[
+				{
+					"address": "16ZBEb7pp6mx5EAGrdeKivztd5eRJFuvYP",
+					"balance": {
+						"confirmed": 450000,
+						"unconfirmed": 0
+					},
+					"error": ""
+				},
+				{
+					"address": "1KGHhLTQaPr4LErrvbAuGE62yPpDoRwrob",
+					"balance": {
+						"confirmed": 0,
+						"unconfirmed": 0
+					},
+					"error": ""
+				},
+				{
+					"address": "InvalidAddressExample",
+					"balance": null,
+					"error": "Error from node: Address is InValid"
+				}
+			]
+			*/
+			responseJSONs.forEach(balanceObject => {
+				const address = balanceObject.address;
+				const errorString = balanceObject.error;
+
+				// Rely on API to detect errors in addresses input by user.
+				if (errorString.length) {
+					throw new Error(`Error with address "${address}": "${errorString}"`);
+				}
+
+				const balance = balanceObject.balance.confirmed + balanceObject.balance.unconfirmed;
+
+				if (!Number.isSafeInteger(balance) || balance < 0) {
+					throw new Error(`Invalid balance for address "${address}" of ${balance}`);
+				}
+
+				addressKey_BalanceValue[address] = balance;
 			});
+
+			if (Object.keys(addressKey_BalanceValue).length != addressesSet.size) {
+				throw new Error(`Received data for ${Object.keys(addressKey_BalanceValue).length} out of ${addressesSet.size} expected addresses`);
+			}
 
 			addressInfos.forEach(addressInfo => {
-				const addressInfoApiData = addressKey_InfoValue[addressInfo.address];
-				if (!addressInfoApiData) {
-					// Unused addresses will not be returned by Blockchair API.
-					// Invalid addresses are not detected by the Blockchair API yet or from here so they are still added to the table.
-					addressInfo.balanceLastUpdate = addressInfo.balance;
-					addressInfo.balance = 0;
-					addressInfo.spent = 0;
-					return;
-				}
-				const balance = addressInfoApiData.balance;
-				const spent = addressInfoApiData.spent;
-				if (typeof balance != 'number') {
-					throw new Error(`Invalid balance data (${balance}) received`);
-				}
-				if (typeof spent != 'number') {
-					throw new Error(`Invalid spent data (${spent}) received`);
-				}
+				const balance = addressKey_BalanceValue[addressInfo.address];
 				addressInfo.balanceLastUpdate = addressInfo.balance;
 				addressInfo.balance = balance;
-				addressInfo.spent = spent;
 			});
-		}
-
-		async function updateAddressInfosFromBitindex(addressInfos) {
-			assert(addressInfos.length);
-
-			// Convert AddressInfo array to address (string) array.
-			const addresses = addressInfos.map(addressInfo => addressInfo.address);
-
-			// Addresses can be comma-separated values.
-			const url = `https://api.bitindex.network/api/v2/addrs/balance?address=${addresses.join(',')}`;
-
-			const response = await fetch(url);
-
-			if (!response.ok) {
-				throw new Error(`Request for address info rejected with status ${response.status}`);
-			}
-
-			const responseJSON = await response.json();
-			/* Example responseJSON:
-				{
-					"data": [
-						{
-							"address": "1BitcoinEaterAddressDontSendf59kuE",
-							"confirmed": 63791,
-							"unconfirmed": 0
-						},
-						{
-							"address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-							"confirmed": 1392000,
-							"unconfirmed": 144237
-						}
-					]
-				}
-			*/
-
-			const data = responseJSON.data;// Expecting returned JSON to have a "data" property.
-
-			if (!Array.isArray(data)) {
-				console.log(`Error: Expected an array but received ${typeof data}.`);
-				throw new Error('Invalid data type received');
-			}
-
-			if (data.length != addressInfos.length) {
-				throw new Error(`Received data for ${data.length} out of ${addressInfos.length} expected addresses`);
-			}
-
-			for (let i = 0; i < data.length; i++) {
-				const address = data[i].address;
-				const confirmed = data[i].confirmed;
-				const unconfirmed = data[i].unconfirmed;
-				if (address !== addressInfos[i].address) {
-					throw new Error(`Invalid or out of order address "${address}" received`);
-				}
-				if (typeof confirmed != 'number' || typeof unconfirmed != 'number') {
-					const errorMessage = 'Unexpected balance data received';
-					console.log(errorMessage);
-					console.log('address:', confirmed);
-					console.log('confirmed:', confirmed);
-					console.log('unconfirmed:', unconfirmed);
-					throw new Error(errorMessage);
-				}
-				addressInfos[i].balanceLastUpdate = addressInfos[i].balance;
-				addressInfos[i].balance = confirmed + unconfirmed;
-				// addressInfos[i].balance may be a number or the default initial value.
-			}
 		}
 
 		async function updateAddressInfosFromMatterCloud(addressInfos) {
@@ -355,6 +354,7 @@
 
 			const response = await fetch(url, {
 				method: 'POST',
+				cache: 'no-cache',
 				headers: {
 					'Content-Type': 'application/json',
 				},
@@ -384,7 +384,7 @@
 			*/
 
 			if (!Array.isArray(responseJSON)) {
-				console.log(`Error: Expected an array but received ${typeof responseJSON}.`);
+				console.error(`Error: Expected an array but received ${typeof responseJSON}.`);
 				throw new Error('Invalid data type received');
 			}
 
@@ -421,17 +421,13 @@
 			const errorMessages = [];
 			let maxNumErrorMessages = 0;
 
-			if (localStorageManager.getTimeOfNextAllowedBlockchairApiCall() <= Date.now()) {
-				try {
-					maxNumErrorMessages++;
-					// Use Blockchair first because it can update AddressInfo spent property.
-					localStorageManager.setTimeOfNextAllowedBlockchairApiCall(Date.now() + 171000000);// 47.5 hours from now.
-					await updateAddressInfosFromBlockchair(addressInfos);
-					return;
-				} catch (err) {
-					console.log(err);
-					errorMessages.push(`Error updating address info from Blockchair: ${err.message}`);
-				}
+			try {
+				maxNumErrorMessages++;
+				await updateAddressInfosFromWhatsonchain(addressInfos);
+				return;
+			} catch (err) {
+				console.log(err);
+				errorMessages.push(`Error updating address info from Whatsonchain: ${err.message}`);
 			}
 
 			try {
@@ -441,15 +437,6 @@
 			} catch (err) {
 				console.log(err);
 				errorMessages.push(`Error updating address info from MatterCloud: ${err.message}`);
-			}
-
-			try {
-				maxNumErrorMessages++;
-				await updateAddressInfosFromBitindex(addressInfos);
-				return;
-			} catch (err) {
-				console.log(err);
-				errorMessages.push(`Error updating address info from Bitindex: ${err.message}`);
 			}
 
 			throw new Error(`${errorMessages.length >= maxNumErrorMessages ? 'Error updating address info from all sources:\n' : ''}${errorMessages.join(',\n')}.`);
