@@ -650,12 +650,12 @@
 						td.classList.add('tdImageButton');
 						td.appendChild((() => {
 							const a = document.createElement('a');
-							a.href = `https://blockchair.com/bitcoin-sv/address/${addressInfo.address}`;
+							a.href = `https://www.whatsonchain.com/address/${addressInfo.address}`;
 							a.target = '_blank';
 							a.title = 'View on block explorer';
 							a.appendChild((() => {
 								const img = document.createElement('img');
-								img.src = 'https://blockchair.com/favicon.ico';
+								img.src = 'https://www.whatsonchain.com/assets/images/logo/favicon-woc.ico';
 								img.alt = 'View';
 								return img;
 							})());
