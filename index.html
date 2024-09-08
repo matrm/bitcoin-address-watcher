@@ -245,7 +245,7 @@
 			// Array of arrays of addresses.
 			const chunksOfAddresses = chunkArray([...addresses], 20);
 
-			const url = 'https://api.whatsonchain.com/v1/bsv/main/addresses/balance';
+			const url = 'https://api.whatsonchain.com/v1/bsv/main/addresses/confirmed/balance';
 
 			const responseJSONs = [];
 			let beforeRequestTime = Date.now();
@@ -293,24 +293,20 @@
 			[
 				{
 					"address": "16ZBEb7pp6mx5EAGrdeKivztd5eRJFuvYP",
-					"balance": {
-						"confirmed": 450000,
-						"unconfirmed": 0
-					},
+					"script": "c7713679ea48e31aec663612f5cbaeb86f9241677c0397b42d957545b47ca2fe",
+					"confirmed": 0,
 					"error": ""
 				},
 				{
 					"address": "1KGHhLTQaPr4LErrvbAuGE62yPpDoRwrob",
-					"balance": {
-						"confirmed": 0,
-						"unconfirmed": 0
-					},
+					"script": "4f8f588fc9bd7304dc73a14c5d3d0813e048986465e22587e3166ce04225a756",
+					"confirmed": 0,
 					"error": ""
 				},
 				{
 					"address": "InvalidAddressExample",
-					"balance": null,
-					"error": "Error from node: Address is InValid"
+					"confirmed": 0,
+					"error": "Unable to convert address to scripthash"
 				}
 			]
 			*/
@@ -323,7 +319,7 @@
 					throw new Error(`Error with address "${address}": "${errorString}"`);
 				}
 
-				const balance = balanceObject.balance.confirmed + balanceObject.balance.unconfirmed;
+				const balance = balanceObject.confirmed;
 
 				if (!Number.isSafeInteger(balance) || balance < 0) {
 					throw new Error(`Invalid balance for address "${address}" of ${balance}`);
