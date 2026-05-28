@@ -1,0 +1,23 @@
+{
+  "name": "bitcoin-address-watcher",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A watch-only web wallet for Bitcoin SV.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "npm run build && vite preview"
+  },
+  "author": "matrm <matrm@gmx.com>",
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14",
+    "vite-plugin-singlefile": "^2.3.3"
+  },
+  "dependencies": {
+    "fetch-rate-limited": "^1.0.0",
+    "storage-namespaced": "^1.0.0"
+  }
+}

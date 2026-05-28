@@ -1,0 +1,123 @@
+body {
+	background-color: #000;
+	color: #ccc;
+	text-align: center;
+	font-family: "Times New Roman", Times, serif;
+}
+
+table {
+	background: #002;
+	border: 0.1em solid #666;
+	border-spacing: 0.2em;
+	border-radius: 0.6em;
+}
+
+th {
+	background-color: #005;
+	color: #ddd;
+	vertical-align: middle;
+	padding: 0.2em;
+	font-size: 1.2em;
+}
+
+td {
+	background-color: #004;
+	color: #eee;
+	vertical-align: middle;
+	padding: 0.2em;
+	font-family: "Courier New", Courier, monospace;
+	min-width: 1.6em;
+}
+
+td img {
+	display: block;
+	object-fit: contain;
+	height: 1.6em;
+	max-width: 16em;
+	margin: 0 auto;
+}
+
+a,
+a:visited,
+a:hover,
+a:active {
+	color: inherit;
+}
+
+.container {
+	margin: 0 auto 10em;
+	display: inline-block;
+}
+
+.textLeft {
+	text-align: left;
+}
+
+.textRight {
+	text-align: right;
+}
+
+td.textRight,
+td.textLeft {
+	padding-left: 0.6em;
+	padding-right: 0.6em;
+}
+
+td.tdWithInput {
+	padding: 0;
+	background-color: transparent;
+}
+
+td.tdImageButton {
+	padding: 0;
+}
+
+input.deleteAddressButton {
+	color: #d00;
+}
+
+.spentColor {
+	color: #dd0;
+}
+
+.increaseColor {
+	color: #0d0;
+}
+
+.decreaseColor {
+	color: #d00;
+}
+
+.input {
+	background-color: #000;
+	color: #ddd;
+	border: 0.1em solid #666;
+	text-align: center;
+	padding: 0.1em 0.4em;
+	text-decoration: none;
+	font: 400 1.1em Arial;
+	text-rendering: auto;
+	letter-spacing: normal;
+	word-spacing: normal;
+	text-transform: none;
+	text-indent: 0px;
+	text-shadow: none;
+	display: inline-block;
+	border-radius: 0.3em;
+}
+
+.inputButton {
+	cursor: pointer;
+}
+
+.inputButton:hover {
+	background-color: #005;
+}
+
+.standardMargin {
+	margin: 0.5em 0.25em 0;
+}
+
+.transparent {
+	opacity: 0.7;
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+	<meta charset="UTF-8">
+
+	<title>Bitcoin Address Watcher</title>
+
+	<link rel="stylesheet" href="./style.css">
+
+	<script type="module" src="./index.ts"></script>
+
+</head>
+
+<body>
+
+	<div class="container">
+
+		<div id="headersContainer"></div>
+
+		<input id="inputAddresses" class="input" type="text" size="64"
+			placeholder="Input one or more addresses separated by commas" />
+		<input id="addAddressesButton" class="input inputButton" type="button" value="Add Addresses" />
+
+		<div id="addressesTableContainer"></div>
+
+		<div id="removeAddressesButtonsContainer"></div>
+
+		<label id="importLabel" class="input inputButton standardMargin">
+			<input id="importFileInput" style="display: none;" type="file" accept=".json" />
+			Import
+		</label><input id="exportButton" class="input inputButton standardMargin" type="button" value="Export" />
+
+	</div>
+
+</body>
+
+</html>
